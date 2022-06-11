@@ -32,3 +32,10 @@ jobs:
           chmod +x ./compile.sh
           ./compile.sh
           ls -la
+          
+      - name: Upload ppu top
+        uses: actions/upload-artifact@v3.1.0
+        with:
+          # Artifact name
+          name: main.pdf
+          path: main.pdf    
