@@ -205,7 +205,7 @@ Where $r_1,r_2 \in \mathbb{R}$ are the real values associated, respectively, to 
 
 Figure \ref{fig:posit8xResolutions} shows the plot of $\overline{r}$ when function of $p_1$ for three configurations of \posit{8}{x}. As we can see, the \textit{resolution} decreases when approaching the value $0$ on the x-axis. Furthermore, the value of $\overline{r}$ is always smaller when using less exponent bits, this means that, real numbers represented by successive posits are closer if compared to other posit configurations with higher number of bits. As reported, the configurations for \posit{x}{0} have a flat resolution in the range $\left [ -1, 1 \right]$. This behaviour will be deeply analyzed in Section \ref{sec:Posit0bitExponent}.
 
-\section{Posit $\Leftrightarrow$ Floating point  interoperability}
+\section{Posit $\Leftrightarrow$ Floating point  interoperability}\label{sec:fir}
 
 One of the core concepts we deal with when bringing together the posit and the floating point domains is the interoperability between the two worlds. This means that we need to have a couple of functions $f,g$ such that, given a set of Posits $\mathbb{P}$ and a set of floating point $\mathbb{F}$:
 \begin{equation}
@@ -377,7 +377,7 @@ In practice, given a \posit{x}{0} we can just shift the posit representation two
 \cfr{Esempio qua}
 
 \subsection{Fast arithmetic operation implementation
-}
+}\label{subsec:fastArithOps}
 
 Having a format with $0$ exponent bits opens the door to implement several arithmetic operations in a way that does not require decoding of the posit itself, possibly introducing an approximation.
 
@@ -397,6 +397,13 @@ Firstly, we need to distinguish the formulation shown in \eqref{eqn:posit0expone
 \end{equation}
 
 \subsubsection{Inverse}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{img/invPosit160.png}
+    \caption{Comparison between exact inverse and decoding-free inverse for \posit{16}{0}}
+    \label{fig:invPosit160}
+\end{figure}
 
 Now, let us have $x, y = \frac{1}{x}$ represented  by two posits with, respectively $s_x,k_x, f_x$ and $s_y = s_x, k_y, f_y$. Since there is an inversion, if $x \in [-1,1]$ then $y \in (-\infty, -1] \cup [1,\infty)$ (or vice-versa). We want to express $x \cdot y \sim 1$ using the posit representation of a real:
 \begin{equation}\label{eqn:positx0prodInverse}
@@ -437,7 +444,7 @@ Therefore, in this case the only transformation needed is $k_y = -k_x$. Since $k
     Y = X\ \mathbf{xor}\ (2^{nbits - 1} - 1) + 1
 \end{equation}
 
-\paragraph{Case b)} When in case b), $k_y = -k_x - 1$ (again from the inversion of \eqref{sec:Posit0bitExponent}). If we substitute this again \eqref{eqn:positx0prodInverse} we obtain:
+\paragraph{Case b)} When in case b), $k_y = -k_x - 1$ (again from the inversion of \eqref{eqn:positRealValueExp0}). If we substitute this again \eqref{eqn:positx0prodInverse} we obtain:
 \begin{equation}
     x \cdot y = 2^{-1} \cdot \left[ \left (1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}} \right ) \cdot \left (1 + \frac{f_y}{2^{2^{nbits + k_x - 2}}} \right ) \right] \sim 1
 \end{equation}
@@ -494,7 +501,7 @@ For symmetry, we can focus only on the positive quadrant of the posit ring. The 
 \end{equation}
 
 
-In case a), we know that both $k_x, k_y$ will be in the $000 \dots 01$. In particular, after multiplying by $2$, the regime length of $y$ will be shorter by 1. This corresponds to shifting the posit one position to the left. Since we are operating on positive numbers, we are guaranteed that the sign is preserved. Let $X,Y$ being the integer for the posits that represent $x,y$:
+In case a), we know that both $k_x, k_y$ will be in the form $000 \dots 01$. In particular, after multiplying by $2$, the regime length of $y$ will be shorter by 1. This corresponds to shifting the posit one position to the left. Since we are operating on positive numbers, we are guaranteed that the sign is preserved. Let $X,Y$ being the integer for the posits that represent $x,y$:
 \begin{equation}
     Y = \mathbf{lls} (X,2) = 2 \cdot X
 \end{equation}
