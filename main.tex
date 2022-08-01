@@ -26,16 +26,20 @@
 \usepackage[cam,center,a4,pdflatex,axes]{crop}
 
 \usepackage{phdthesis}
-
+\usepackage[toc,page]{appendix}
 \usepackage{fancyhdr}
 \usepackage{color}
 \usepackage{array}
 \usepackage{mdwmath}
 \usepackage{mdwtab}
 \usepackage{amsmath,amssymb}
+\usepackage{lscape}
 \usepackage{cite}
+\usepackage{cancel}
 \usepackage{graphicx}
+\usepackage{amsmath}
 \usepackage{listings}
+\usepackage{multicol}
 \usepackage{subfig}
 \usepackage{booktabs}
 \usepackage{latexsym}
@@ -97,6 +101,7 @@ bookmarksopen=true,hidelinks]{hyperref}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\newcommand{\hl}[1]{#1}
 
 \usepackage{xcolor}
 \usepackage[mathletters]{ucs}
@@ -238,13 +243,17 @@ bookmarksopen=true,hidelinks]{hyperref}
 \definecolor{solarized@cyan}{HTML}{2AA198}
 \definecolor{solarized@green}{HTML}{859900}
 
+\newcommand{\instbit}[1]{\mbox{\scriptsize #1}}
+\newcommand{\instbitrange}[2]{~\instbit{#1} \hfill \instbit{#2}~}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \newtheorem{Definition}{Definition}[section]
 
 \lstset{tabsize=2,basicstyle=\footnotesize,breaklines=true}
 
-\usepackage[english,italian]{babel}
+\usepackage[english]{babel}
 \usepackage{ulem}
 \normalem
 
@@ -358,6 +367,12 @@ bookmarksopen=true,hidelinks]{hyperref}
 \input{chapters/posit_library} % uncomment if you want part I
 \input{chapters/posit_networks} % uncomment if you want part I
 \input{chapters/posit_hw}
+
+\input{chapters/posit_fullppu}
+
+
+
+\input{chapters/appendix}
 % Insert further chapters using the following syntax
 % \input{Source_Folder_Name/FileName}
 

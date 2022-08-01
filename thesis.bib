@@ -888,3 +888,208 @@ doi={https://standards.ieee.org/ieee/754/4211/},
   howpublished = "\url{https://developer.arm.com/solutions/hpc/resources/hpc-white-papers/a-sneak-peek-into-sve-and-vla-programming}",
   year={2018}
 }
+
+@inproceedings{Ioffe:2015:BNA:3045118.3045167,
+ author = {Ioffe, Sergey and Szegedy, Christian},
+ title = {Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift},
+ booktitle = {Proceedings of the 32Nd International Conference on International Conference on Machine Learning - Volume 37},
+ series = {ICML'15},
+ year = {2015},
+ location = {Lille, France},
+ pages = {448--456},
+ numpages = {9},
+ url = {http://dl.acm.org/citation.cfm?id=3045118.3045167},
+ acmid = {3045167},
+ publisher = {JMLR.org},
+} 
+
+@misc{kukaka2017regularization,
+    title={Regularization for Deep Learning: A Taxonomy},
+    author={Jan Kukačka and Vladimir Golkov and Daniel Cremers},
+    year={2017},
+    eprint={1710.10686},
+    archivePrefix={arXiv},
+    primaryClass={cs.LG}
+}
+
+@article{plaut1986experiments,
+  title={Experiments on Learning by Back Propagation.},
+  author={Plaut, David C and others},
+  year={1986},
+  publisher={ERIC}
+}
+
+@article{Krizhevsky:2017:ICD:3098997.3065386,
+ author = {Krizhevsky, Alex and Sutskever, Ilya and Hinton, Geoffrey E.},
+ title = {ImageNet Classification with Deep Convolutional Neural Networks},
+ journal = {Commun. ACM},
+ issue_date = {June 2017},
+ volume = {60},
+ number = {6},
+ month = may,
+ year = {2017},
+ issn = {0001-0782},
+ pages = {84--90},
+ numpages = {7},
+ url = {http://doi.acm.org/10.1145/3065386},
+ doi = {10.1145/3065386},
+ acmid = {3065386},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+} 
+
+@article{JMLR:v15:srivastava14a,
+  author  = {Nitish Srivastava and Geoffrey Hinton and Alex Krizhevsky and Ilya Sutskever and Ruslan Salakhutdinov},
+  title   = {Dropout: A Simple Way to Prevent Neural Networks from Overfitting},
+  journal = {Journal of Machine Learning Research},
+  year    = {2014},
+  volume  = {15},
+  pages   = {1929-1958},
+  url     = {http://jmlr.org/papers/v15/srivastava14a.html}
+}
+
+@ARTICLE{9066876, author={J. {Lu} and C. {Fang} and M. {Xu} and J. {Lin} and Z. {Wang}}, journal={IEEE Transactions on Computers}, title={Evaluations on Deep Neural Networks Training Using Posit Number System}, year={2020}, volume={}, number={}, pages={1-1},}
+
+@ARTICLE{ppulight,
+  author={Cococcioni, Marco and Rossi, Federico and Ruffaldi, Emanuele and Saponara, Sergio},
+  journal={IEEE Transactions on Emerging Topics in Computing}, 
+  title={A Lightweight Posit Processing Unit for RISC-V Processors in Deep Neural Network Applications}, 
+  year={2021},
+  volume={},
+  number={},
+  pages={1-1},
+  doi={10.1109/TETC.2021.3120538}}
+
+@ARTICLE{milenkovic_modular_2015,
+       author = {{Milenkovi{\'c}}, Neboj{\v{s}}a Z. and {Stankovi{\'c}}, Vladimir V. and {Mili{\'c}}, Miljana Lj.},
+        title = "{Modular Design Of Fast Leading Zeros Counting Circuit}",
+      journal = {Journal of Electrical Engineering},
+     keywords = {leading zeros count, all zeros detection, modular design},
+         year = 2015,
+        month = nov,
+       volume = {66},
+       number = {6},
+          eid = {54},
+        pages = {54},
+          doi = {10.2478/jee-2015-0054},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2015JEE....66...54M},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+
+@article{dimitrakopoulos_low-power_2008,
+    title = {Low-{Power} {Leading}-{Zero} {Counting} and {Anticipation} {Logic} for {High}-{Speed} {Floating} {Point} {Units}},
+    volume = {16},
+    issn = {1063-8210},
+    url = {http://ieeexplore.ieee.org/document/4539802/},
+    doi = {10.1109/TVLSI.2008.2000458},
+    number = {7},
+    urldate = {2022-05-29},
+    journal = {IEEE Transactions on Very Large Scale Integration (VLSI) Systems},
+    author = {Dimitrakopoulos, Giorgos and Galanopoulos, Kostas and Mavrokefalidis, Christos and Nikolos, Dimitris},
+    month = jul,
+    year = {2008},
+    pages = {837--850},
+}
+
+
+@incollection{lilja_pipelining_2004,
+    address = {Cambridge},
+    title = {Pipelining},
+    isbn = {978-0-521-82866-6},
+    url = {https://www.cambridge.org/core/books/designing-digital-computer-systems-with-verilog/pipelining/DAFC6CA95F16B275361D88CD31E5C6D3},
+    abstract = {If you were plowing a field, which would you rather use? Two strong oxen or 1024 chickens?Seymour Cray (1925–1996), father of supercomputingInstruction partitioning for pipeliningIn Section 4.3 we learned that the execution of a processor instruction consists of two basic steps: fetching the instruction from memory, and then executing it. In the simplest implementation of a processor, the complete fetch-execute cycle would be completed for one instruction before the next one begins. We saw this type of one-instruction-at-a-time operation in the algorithmic behavioral model in Chapter 4. To speed up the execution of instructions, however, we can break the fetch-execute cycle into several simpler sub-operations. We then can overlap the execution of different instructions in an assembly line fashion where each step in the assembly line is dedicated to performing one specific operation for each instruction. This assembly line processing is called pipelining.The first step in designing a pipeline for a processor is to determine the smaller sub-operations within the fetch-execute cycle that must be performed to execute an instruction. For the VeSPA processor, each instruction will perform some of the following sub-operations, although not all of the instructions will perform all of the operations:Fetch the instruction from memory.Increment the program counter.Fetch the operands from the registers.Compute a memory address.Read an operand from memory.Write a result to the memory or to a register.The next step in designing the pipeline for VeSPA, or for any other processor ISA, is to determine how these individual operations should be partitioned into the different stages of the pipeline.},
+    urldate = {2022-06-04},
+    booktitle = {Designing {Digital} {Computer} {Systems} with {Verilog}},
+    publisher = {Cambridge University Press},
+    editor = {Lilja, David J. and Sapatnekar, Sachin S.},
+    year = {2004},
+    doi = {10.1017/CBO9780511607059.007},
+    pages = {94--104},
+    file = {Snapshot:/Users/fran/Zotero/storage/BUZQZZKS/DAFC6CA95F16B275361D88CD31E5C6D3.html:text/html},
+}
+
+
+@article{leiserson_retiming_1991,
+    title = {Retiming synchronous circuitry},
+    volume = {6},
+    issn = {0178-4617, 1432-0541},
+    url = {http://link.springer.com/10.1007/BF01759032},
+    doi = {10.1007/BF01759032},
+    language = {en},
+    number = {1-6},
+    urldate = {2022-06-09},
+    journal = {Algorithmica},
+    author = {Leiserson, Charles E. and Saxe, James B.},
+    month = jun,
+    year = {1991},
+    pages = {5--35},
+}
+
+@incollection{muller_hardware_2010,
+    address = {Boston},
+    title = {Hardware {Implementation} of {Floating}-{Point} {Arithmetic}},
+    isbn = {978-0-8176-4705-6},
+    url = {https://doi.org/10.1007/978-0-8176-4705-6_9},
+    abstract = {The previous chapter has shown that operations on floating-point numbers are naturally expressed in terms of integer or fixed-point operations on the significand and the exponent. For instance, to obtain the product of two floating-point numbers, one basically multiplies the significands and adds the exponents. However, obtaining the correct rounding of the result may require considerable design effort and the use of nonarithmetic primitives such as leading-zero counters and shifters. This chapter details the implementation of these algorithms in hardware, using digital logic.},
+    language = {en},
+    urldate = {2022-04-09},
+    booktitle = {Handbook of {Floating}-{Point} {Arithmetic}},
+    publisher = {Birkhäuser},
+    author = {Muller, Jean-Michel and Brisebarre, Nicolas and de Dinechin, Florent and Jeannerod, Claude-Pierre and Lefèvre, Vincent and Melquiond, Guillaume and Revol, Nathalie and Stehlé, Damien and Torres, Serge},
+    editor = {Muller, Jean-Michel and Brisebarre, Nicolas and de Dinechin, Florent and Jeannerod, Claude-Pierre and Lefèvre, Vincent and Melquiond, Guillaume and Revol, Nathalie and Stehlé, Damien and Torres, Serge},
+    year = {2010},
+    doi = {10.1007/978-0-8176-4705-6_9},
+    pages = {269--320},
+}
+
+@misc{drom,
+    title = {Reciprocal {Approximation} / {Aliaksei} {Chapyzhenka} / {Observable}},
+    url = {https://observablehq.com/@drom/reciprocal-approximation},
+    urldate = {2022-03-23},
+}
+
+@misc{tan2020efficientdet,
+      title={EfficientNet: Rethinking Model Scaling for Convolutional Neural Networks}, 
+      author={M. Tan and Q. V. Le},
+      year={2020},
+      eprint={1905.11946},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+
+@article{Liu_2016,
+   title={SSD: Single Shot MultiBox Detector},
+   ISBN={9783319464480},
+   ISSN={1611-3349},
+   url={http://dx.doi.org/10.1007/978-3-319-46448-0_2},
+   DOI={10.1007/978-3-319-46448-0_2},
+   journal={Lecture Notes in Computer Science},
+   publisher={Springer International Publishing},
+   author={Liu, W. and Anguelov, D. and Erhan, D. and Szegedy, C. and Reed, Scott and Fu, Cheng-Yang and Berg, Alexander C.},
+   year={2016},
+   pages={21–37}
+}
+
+
+@TECHREPORT{Krizhevsky09learningmultiple,
+    author = {A. Krizhevsky},
+    title = {Learning multiple layers of features from tiny images},
+    institution = {},
+    year = {2009}
+}
+
+
+@misc{recht2019imagenet,
+      title={Do ImageNet Classifiers Generalize to ImageNet?}, 
+      author={B. Recht and Rebecca Roelofs and Ludwig Schmidt and Vaishaal Shankar},
+      year={2019},
+      eprint={1902.10811},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+
+@misc{pascal-voc-2007,
+	author = "Everingham, M. and Van~Gool, L. and Williams, C. K. I. and Winn, J. and Zisserman, A.",
+	title = "The {PASCAL} {V}isual {O}bject {C}lasses {C}hallenge 2007 {(VOC2007)} {R}esults",
+	howpublished = "\url{http://www.pascal-network.org/challenges/VOC/voc2007/workshop/index.html}"
+}	

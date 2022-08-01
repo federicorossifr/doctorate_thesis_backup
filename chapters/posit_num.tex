@@ -172,7 +172,7 @@ As we can see from Figure \ref{fig:posit8xFractions}, this range is always symme
 
 Note that both in \ref{eqn:highestFractionBits} and \ref{eqn:highestFractionBitsFull}, the set are open from the side of $\text{useed}$. This is because, by design, the last positive posit with the highest number fraction bits is the one immediately preceeding the posit representing $\text{useed}$.
 
-\begin{table}[]
+\begin{table}
 \caption{Ranges of the maximum fraction bits numbers for different posit configurations}
 \label{tab:positXxMaxFractionRanges}
 \centering
@@ -205,7 +205,7 @@ Where $r_1,r_2 \in \mathbb{R}$ are the real values associated, respectively, to 
 
 Figure \ref{fig:posit8xResolutions} shows the plot of $\overline{r}$ when function of $p_1$ for three configurations of \posit{8}{x}. As we can see, the \textit{resolution} decreases when approaching the value $0$ on the x-axis. Furthermore, the value of $\overline{r}$ is always smaller when using less exponent bits, this means that, real numbers represented by successive posits are closer if compared to other posit configurations with higher number of bits. As reported, the configurations for \posit{x}{0} have a flat resolution in the range $\left [ -1, 1 \right]$. This behaviour will be deeply analyzed in Section \ref{sec:Posit0bitExponent}.
 
-\section{Posit $\Leftrightarrow$ Floating point  interoperability}\label{sec:fir}
+\section{Posit and Floating point  interoperability}\label{sec:fir}
 
 One of the core concepts we deal with when bringing together the posit and the floating point domains is the interoperability between the two worlds. This means that we need to have a couple of functions $f,g$ such that, given a set of Posits $\mathbb{P}$ and a set of floating point $\mathbb{F}$:
 \begin{equation}
@@ -659,3 +659,397 @@ We can start from the sigmoid before. We firstly negate the argument to have a s
 \end{align}
 
 If we substitute the sigmoid function with the pseud-sigmoid seen in \eqref{eqn:pseudoSigmoidPosit0} we obtain a decoding-free \textit{pseudo-ELU}.
+
+
+
+
+\section{Arithmetic operations on posits}\label{sec:posit_ops}
+
+\subsection{Extraction}\label{Extraction}
+
+
+The extraction stage performs the conversion from raw bits representing the posit bit-string to FIR, with little additional overhead.
+This includes the most expensive and delicate operation, that can potentially break the entire posit affordability, in favor of static sized fields like traditional floats.
+The reason why lies in the fact that the exponent value depends on the regime, which in turns, is subjected to field-size change at run time. %% \ref{leading_zero_counter}
+
+
+
+
+% \hl {move this little paragrahp somewhere else?}
+While this mechanism is what allows to obtain the mathematical-wise best of both worlds, i.e. largest dynamic range and largest precision, it comes at a non-negligible cost of complicating the extraction stage, even more so when ported to hardware.
+\iffalse
+The consequence of this is twofold: on one hand this allows to achieve granular resolution without sacrificing dynamic range, which not only highly desirable but also the gem that make the posit shine and stand out from the alternative representations; \hl{expand or provide reference}, on the other hand this adds non-negligible overhead, more so when ported to hardware \hl{add reference of link to section of ppu}.
+\fi
+
+
+
+\subsection{Input conditioning}\label{input_conditioning_section}
+
+Before jumping in to the actual extraction, it is wise to prepend a logic dedicated to distinguish and micromanage distinctive cases. These are those cases where either one of the input holds a -- disregarding the sign bit -- $0$ (i.e. true $0$ and NaR), or a case where the operation leads to an \textit{easy} output. All these boil down to simple cases that, similarly to the \textit{fast opeations}, can be resolved at bit level, irrespective of the \textit{real value} the posit holds. Handling these conditions upfront streamlines the logic ahead, and reduce hardware resources.
+
+\hypertarget{special_cases_link}{~}
+\textit{special} and \textit{trivial} cases are then defined as:
+\begin{itemize}
+\item one such that either input is special, which necessarily leads to a special output, and
+\item one such that the output of a given operation between two posits is special
+\end{itemize}
+respectively.
+
+If this case is caught, the result is swiftly resolved and the operation terminates without further action.
+
+
+The possible combination, for each of the four operation are tabulated -- according to the posit standard specification -- in tables \ref{table:table_posit_op_combination}, where a distintion between \textit{special} and \textit{trivial} is highlighted.
+
+
+
+A special case is A trivial case in
+Special cases are rows whose output is red colored, and trivial are those whose outputs are orange colored.
+Each posit value can either be \textit{special}, i.e. $\in \{0$, \mbox{NaR}\}, or \textit{non-special}, i.e. none of the above.
+
+\begin{table}
+\begin{center}
+\begin{tabular}{ cc }   % top level tables, with 2 columns
+addition & subtraction \\
+\begin{tabular}{||c c c | c||}
+    \hline
+    $p_1$ & op & $p_2$ & $p_{out}$ \\ [0.5ex]
+    \hline\hline
+    $0$ & $+$ & $0$ & \textcolor{red}{$0$} \\
+    \hline
+    $0$ & $+$ & NaR & \textcolor{red}{NaR} \\
+    \hline
+    $0$ & $+$ & $p_2$ & \textcolor{yellow}{$p_2$} \\ %%%% https://www.overleaf.com/learn/latex/Using_colours_in_LaTeX
+    \hline
+    NaR & $+$ & $0$ & \textcolor{red}{NaR} \\
+    \hline
+    NaR & $+$ & NaR & \textcolor{red}{NaR} \\
+    \hline
+    NaR & $+$ & $p_2$ & \textcolor{red}{NaR} \\
+    \hline
+    $p_1$ & $+$ & $0$ & \textcolor{yellow}{$p_1$} \\
+    \hline
+    $p_1$ & $+$ & NaR & \textcolor{red}{NaR} \\
+    \hline
+    $p_1$ & $+$ & $p_2$ & \textcolor{green}{$p_1 + p_2$} \\
+    \hline %%% 2 more trivial cases
+    $p_1$ & $+$ & $-p_1$ & \textcolor{yellow}{$0$} \\
+    \hline
+    $-p_2$ & $+$ & $p_2$ & \textcolor{yellow}{$0$} \\
+    \hline
+\end{tabular} &
+\begin{tabular}{||c c c | c||}
+    \hline
+    $p_1$ & op & $p_2$ & $p_{out}$ \\ [0.5ex]
+    \hline\hline
+    $0$ & $-$ & $0$ & \textcolor{red}{$0$} \\
+    \hline
+    $0$ & $-$ & NaR & \textcolor{red}{NaR} \\
+    \hline
+    $0$ & $-$ & $p_2$ & \textcolor{yellow}{$-p_2$} \\ %%%% https://www.overleaf.com/learn/latex/Using_colours_in_LaTeX
+    \hline
+    NaR & $-$ & $0$ & \textcolor{red}{NaR} \\
+    \hline
+    NaR & $-$ & NaR & \textcolor{red}{NaR} \\
+    \hline
+    NaR & $-$ & $p_2$ & \textcolor{red}{NaR} \\
+    \hline
+    $p_1$ & $-$ & $0$ & \textcolor{yellow}{$p_1$} \\
+    \hline
+    $p_1$ & $-$ & NaR & \textcolor{red}{NaR} \\
+    \hline
+    $p_1$ & $-$ & $p_2$ & \textcolor{green}{$p_1 - p_2$} \\
+    \hline %%% 2 more trivial cases
+    $p_1$ & $-$ & $p_1$ & \textcolor{yellow}{$0$} \\
+    \hline
+    $p_2$ & $-$ & $p_2$ & \textcolor{yellow}{$0$} \\
+    \hline
+\end{tabular}\\ \\
+\end{tabular}
+\end{center}
+\begin{center}
+\begin{tabular}{ cc }   % top level tables, with 2 columns
+multiplication & division \\
+\begin{tabular}{||c c c | c||}
+    \hline
+    $p_1$ & op & $p_2$ & $p_{out}$ \\ [0.5ex]
+    \hline\hline
+    $0$ & $*$ & $0$ & \textcolor{red}{$0$} \\
+    \hline
+    $0$ & $*$ & NaR & \textcolor{red}{NaR} \\
+    \hline
+    $0$ & $*$ & $p_2$ & \textcolor{yellow}{$0$} \\ %%%% https://www.overleaf.com/learn/latex/Using_colours_in_LaTeX
+    \hline
+    NaR & $*$ & $0$ & \textcolor{red}{NaR} \\
+    \hline
+    NaR & $*$ & NaR & \textcolor{red}{NaR} \\
+    \hline
+    NaR & $*$ & $p_2$ & \textcolor{red}{NaR} \\
+    \hline
+    $p_1$ & $*$ & $0$ & \textcolor{yellow}{$0$} \\
+    \hline
+    $p_1$ & $*$ & NaR & \textcolor{red}{NaR} \\
+    \hline
+    $p_1$ & $*$ & $p_2$ & \textcolor{green}{$p_1 * p_2$} \\
+    \hline
+\end{tabular} &
+\begin{tabular}{||c c c | c||}
+    \hline
+    $p_1$ & op & $p_2$ & $p_{out}$ \\ [0.5ex]
+    \hline\hline
+    $0$ & $/$ & $0$ & \textcolor{red}{NaR} \\
+    \hline
+    $0$ & $/$ & NaR & \textcolor{red}{NaR} \\
+    \hline
+    $0$ & $/$ & $p_2$ & \textcolor{yellow}{$0$} \\ %%%% https://www.overleaf.com/learn/latex/Using_colours_in_LaTeX
+    \hline
+    NaR & $/$ & $0$ & \textcolor{red}{NaR} \\
+    \hline
+    NaR & $/$ & NaR & \textcolor{red}{NaR} \\
+    \hline
+    NaR & $/$ & $p_2$ & \textcolor{red}{NaR} \\ %%%%
+    \hline
+    $p_1$ & $/$ & $0$ & \textcolor{yellow}{NaR} \\
+    \hline
+    $p_1$ & $/$ & NaR & \textcolor{red}{NaR} \\
+    \hline
+    $p_1$ & $/$ & $p_2$ & \textcolor{green}{$p_1 / p_2$} \\
+    \hline
+\end{tabular} \\
+\end{tabular}
+\end{center}
+\caption{Table operation cases for any posit combination}
+\label{table:table_posit_op_combination}
+\end{table}
+
+
+
+
+
+
+
+In order to simplify the downstream logic concerning addition/subtraction, we enforce right at the start, that $p_1$ and $p_2$ carry the \textit{absolute} largest and smaller value respectively. At the same time a flag indicating whether their signs match is propagated forward to the addition/subtraction core logic. This observation allows to make assumptions that simplify the operations down the line.
+
+
+
+
+In the following Sections we cover the implementation of Posit binary operations. For simplicity we will refer to the real value of a posit as follows:
+\begin{equation}\label{eqn:posit_equation}
+    p = (-1)^{s} \cdot 2^{te} \cdot (1.f)
+\end{equation}
+Where $te$ is the exponent-regime joint value:
+\begin{equation}
+    te = (2^{2^{esbits}})^{k} \cdot 2^{e} = 2^{2^{esbits}\cdot k + e}
+\end{equation}
+
+\subsection{Addition and Subtraction}\label{Addition_and_Subtraction}
+
+Due to the likelihood of the addition and subtraction operation, these are discussed together, highlighting where the two operations differ.
+
+
+Given two posits, $p_1$ and $p_2$, expressed as \eqref{eqn:posit_equation}, the objective is finding the tuple $(s_{out}, k_{out}, e_{out}, f_{out})$ such that the following holds:
+\begin{equation}\label{equ:addition_equation_001}
+    \underbrace{\big[ (-1)^{s_1} \cdot 2^{te_1} \cdot (1.f_1) \big]}_{p_1} \pm \underbrace{\big[ (-1)^{s_2} \cdot 2^{te_2} \cdot (1.f_2) \big]}_{p_2} = \underbrace{ (-1)^{s_{out}} \cdot \overbrace{\big(2^{2^{esbits}}\big)^{k_{out}} \cdot 2^{e_{out}}}^{2^{te_{out}}} \cdot (1.f_{out})}_{p_{out}}
+\end{equation}
+
+We can generalize for rounding inexactness, obtaining the following:
+
+\begin{equation}
+\begin{gathered}
+    (s_{out}, k_{out}, e_{out}, f_{out}): \\
+    \min | \big[ (-1)^{s_1} \cdot 2^{te_1} \cdot (1.f_1) \pm (-1)^{s_2} \cdot 2^{te_2} \cdot (1.f_2) \big] - \big[ (-1)^{s_{out}} \cdot 2^{te_{out}} \cdot (1.f_{out}) \big] |
+\end{gathered}
+\end{equation}
+
+
+The following premises that
+\begin{equation}\label{equ:p1_greater_p2}
+|p_1| \ge |p_2|
+\end{equation}
+and neither is \textit{special}.
+A constant $b$ (as in \textit{bias}) is defined as
+\begin{equation}\label{equ:b_bias}
+\begin{aligned}
+% b & = \big( 2^{es} \cdot k_1 + e_1 \big) - \big( 2^{es} \cdot k_2 + e_2 \big) \\
+%   & = te_1 - te_2 \geq 0
+b \triangleq te_1 - te_2
+\end{aligned}
+\end{equation}
+Given (\ref{equ:p1_greater_p2}) $b \ge 0$, and $s_{out} \leftarrow s_1$. $te_2$ is expanded to $te_1 - (te_1 - te_2)$ so that $2^{te_2}$ becomes $2^{te_1} \cdot 2^{-b}$ and the power scale $2^{te_1}$ can be collected. Finally the left-hand side of (\ref{equ:addition_equation_001}) simplifies to
+\begin{equation}
+(-1)^{s_1} \cdot 2^{te_1} \cdot \big[ \underbrace{(1.f_1) \pm (1.f_2) \cdot 2^{-b}}_{1.f_{out}}\big]
+\end{equation}
+which is the bit-friendly expression needed to proceed.
+Next the fractional components are \textit{summed} together, but first a quick recap:
+
+the notation $(1.f)_2$\footnote{using explicit subscript notation to notify the base} encapsulates all the numbers $\in [(1.0)_2, (1.111\dots)_2 ] \equiv [1.0_{10},  2.0_{10})$.
+
+The scale factor multiplier $2^{-b}$ effectively applies a rightwise shifts to $(1.f)_2$ by $b$ positions:
+$$
+(1.f)_2 \cdot 2^{-b} \equiv (\underbrace{0.0000\dots0000}_{b}1f)_2 \in (0.0_{10}, 1.0_{10}]
+$$
+
+
+
+With this in mind, the addition and subtraction operations can generate figures respectively in the range of:
+\begin{itemize}
+    \item \textit{addition}: $(1.f_1) + [(1.f_2) \cdot 2^{-b}] \in [1, 4)^{*}$
+    \item \textit{subtraction}: $(1.f_1) - [(1.f_2) \cdot 2^{-b}] \in [0, 2)^{**}$
+\end{itemize}
+interpretable as fixed point number \texttt{Fx<2,\_>} and \texttt{Fx<1,\_>}\footnote{\texttt{\_} signifying undetermined a priori fixed point total size}, where $2$ and $1$ are the number of bits required to fit the largest binary integers $3^{*}$ and $1^{**}$.
+
+This is is where the addition and subtraction flows slightly diverge: in order to re-normalize the result of the fractional addition/subtraction into the $(1.f_{out})$ configuration we have two different approaches:
+
+\begin{multicols}{2}
+    \subsubsection*{Addition}
+    the fraction must be right-shifted by $1$ if the most significant bit is $1$, i.e. $(1.f_1) + (1.f_2) \cdot 2^{-b} \ge 2.0$. 
+    This drops the least significant bit which is useless if such bit is a $0$. Otherwise, if it's a $1$ the information regarding such loss must be preserved and forwarded to the downstream stages: for that a flag \textit{is\_truncated} is used. Finally, the right shift is compensated by increasing the value $te$ by 1.
+\columnbreak
+    \subsubsection*{Subtraction}
+    the fraction must be left-shifted by a non predictable variable amount ($lz$), i.e. the number of leading zeros. This is where the second instance of the leading zero count is employed. The compensation takes place decreasing the value $te$ by the number of leading zeros.
+    $$
+    2^{te} \cdot (\overbrace{0.00\dots00}^{lz}1f) \equiv 2^{te - lz} \cdot (1.f)
+    $$
+\end{multicols}
+
+\begin{figure}
+    \begin{center}
+    % \includegraphics[height=0.7\textheight]{assets/figures/addition_flow.pdf}
+    \includegraphics[width=\textwidth]{figures/addition_flow.pdf}
+    \caption{Posit algebraic sum algorithmic flow}
+    \label{fig:additionflow}
+    \end{center}
+\end{figure}
+
+An example of the algorithmic flow for the posit algebraic sum is shown in Figure \ref{fig:additionflow}.
+
+\subsection{Multiplication}\label{Multiplication}
+
+Similarly to the addition/subtraction, where we have two posit expressed as (\ref{eqn:posit_equation}), the goal is finding the tuple $(s_{out}, k_{out}, e_{out}, f_{out})$ such that the following holds:
+
+
+\begin{equation}\label{equ:multiplication_equation_001}
+    \big[ (-1)^{s_1} \cdot 2^{te_1} \cdot (1.f_1) \big] \cdot \big[ (-1)^{s_2} \cdot 2^{te_2} \cdot (1.f_2) \big] =(-1)^{s_{out}} \cdot \overbrace{\big(2^{2^{ES}}\big)^{k_{out}} \cdot 2^{e_{out}}}^{2^{te_{out}}} \cdot (1.f_{out})
+\end{equation}
+
+Again, we can account for rounding inexactness:
+
+\begin{equation}
+\begin{gathered}
+    (s_{out}, k_{out}, e_{out}, f_{out}): \\
+    \min \left| \big[ (-1)^{s_1} \cdot 2^{te_1} \cdot (1.f_1) \cdot (-1)^{s_2} \cdot 2^{te_2} \cdot (1.f_2) \big] - \big[ (-1)^{s_{out}} \cdot 2^{te_{out}} \cdot (1.f_{out}) \big] \right|
+\end{gathered}
+\end{equation}
+Simplifying the left-hand side of the equation, we obtain the following:
+\begin{equation}
+\begin{gathered}
+    (-1)^{s_1 \oplus s_2}  \cdot \big[ 2^{te_1} \cdot 2^{te_2} \big] \cdot \big[ (1.f_1) \cdot (1.f_2) \big]
+\end{gathered}
+\end{equation}
+
+Where $s_1$ and $s_2$ are \textit{xor}-ed together to set $s_{out}$ and the total exponents $te_1$ and $te_2$ summed up to give $te_{out}$. 
+$(1.f_1) \cdot (1.f_2)$ results in a number $\in [1, 4)$, and just like in the addition -- if not already -- it is readjusted to its normalized format by means of a right-shift and an increment of $te$.
+
+
+\begin{figure}
+    \begin{center}
+    % \includegraphics[height=0.7\textheight]{assets/figures/posit_mul_flow.pdf}
+    \includegraphics[width=\textwidth]{figures/posit_mul_flow.pdf}
+    \caption{Posit multiplication algorithmic flow}
+    \label{fig:mulflow}
+    \end{center}
+\end{figure}
+
+An example of the algorithmic flow for the posit algebraic sum is shown in Figure \ref{fig:mulflow}.
+
+\subsection{Division}
+
+
+
+Similarly to the addition/subtraction and multiplication, we have two posit expressed as (\ref{eqn:posit_equation}), the goal is finding the tuple $(s_{out}, k_{out}, e_{out}, f_{out})$ such that
+the following holds:
+\begin{equation}\label{equ:division_equation_001}
+    \frac{\big[ (-1)^{s_1} \cdot 2^{te_1} \cdot (1.f_1) \big]}{\big[ (-1)^{s_2} \cdot 2^{te_2} \cdot (1.f_2) \big]} = (-1)^{s_{out}} \cdot \overbrace{\big(2^{2^{ES}}\big)^{k_{out}} \cdot 2^{e_{out}}}^{2^{te_{out}}} \cdot (1.f_{out})
+\end{equation}
+
+Again, we can account for rounding inexactness:
+
+
+\begin{equation}
+\begin{gathered}
+    (s_{out}, k_{out}, e_{out}, f_{out}): \\
+    \min \left| \frac{ (-1)^{s_1} \cdot 2^{te_1} \cdot (1.f_1)}{(-1)^{s_2} \cdot 2^{te_2} \cdot (1.f_2)} - \big[ (-1)^{s_{out}} \cdot 2^{te_{out}} \cdot (1.f_{out}) \big] \right|
+\end{gathered}
+\end{equation}
+Simplifying the left-hand side of (\ref{equ:division_equation_001}), we obtain
+\begin{equation}
+\begin{gathered}
+    \frac{(-1)^{s_1}}{(-1)^{s_2}} \cdot \frac{2^{te_1}}{2^{te_2}} \cdot \frac{(1.f_1)}{(1.f_2)}
+\end{gathered}
+\end{equation}
+which identically to the multiplication, suggests that $s_{out} = s_1 \oplus s_2$ and $te_{out} = te_1 - te_2$.
+From the mathematical standpoint it comes off as not too dissimilar than a product, as seen in section \ref{Multiplication}; the only difference being the result falling within the
+\begin{equation}\label{equ:min_max_frac_0010032}
+\begin{aligned}
+\left[\min{\frac{(1.f_1)}{(1.f_2)}}, \max{\frac{(1.f_1)}{(1.f_2)}} \right] &= \left[\frac{\min{(1.f_1)}}{\max{(1.f_2)}}, \frac{\max{(1.f_1)}}{\min{(1.f_2)}} \right] = \\
+&= \left[\frac{1.0}{2.0^{-}}, \frac{2.0^{-}}{1.0} \right] =\\
+&= \left(0.5, 2.0 \right) = \\
+&= \left[(0.111\dots)_2, (1.111\dots)_2 \right]
+\end{aligned}
+\end{equation}
+range rather than the product's $[1.0, 4.0)$ range.
+
+
+If we remember that $(1.f)$ is indeed not $\in \mathbb{R}$, rather $\in \mathbb{Q}$, we can mulitply both numerator and denominator such that they are two integer numbers:
+\begin{equation}\label{divunsignedinteger00001}
+\frac{1.\overbrace{011\dots0001001}^{F-bits}}{1.\underbrace{110\dots0001111}_{F-bits}} \equiv \frac{1011\dots0001001 \cdot \cancel{2^{-F}}}{1110\dots0001111 \cdot \cancel{2^{-F}}}
+\end{equation}
+and the result is the one of an integer division. Consequence of (\ref{equ:min_max_frac_0010032}), the result will have either a $0$ or $1$ as most significant bit. 
+
+The critical part of the division operation is the one in Equation \eqref{divunsignedinteger00001}. Integer division is not a straightforward operation and can be performed in different ways, each with a trade-off between accuracy and resulting hardware complexity. We will deepen on this topic in the Section \ref{sec:div_Fractions}. 
+
+
+
+
+\subsection{Normalization}
+
+
+\textit{Normalization} is the umbrella term given to the set of sequential steps required to convert a general FIR representation, i.e. the output of the \textit{computation} stage, to a well packed posit. This is, for the most part, independent of the underlying operation.
+
+
+The two terms $k$ and $e$ must be unpacked from the total exponent ($te$) term (\ref{eqn:posit_equation}):
+\begin{equation}\label{k_and_exp_from_totalexp}
+\begin{cases}
+    k \leftarrow \left \lfloor \dfrac{te}{2^{ES}} \right \rfloor \\
+    e \leftarrow te - 2^{ES} \cdot k
+\end{cases}
+\end{equation}
+This $k$ however is not yet the familiar $k$ that comes up in the posit expression (\ref{eqn:posit_equation}) as it might go out of the bounds of the maximum $k$ representable by a $N$-bits posit's regime field. The information related to whether this occurs is assigned to a flag, whose value will come up during rounding. If that does indeed happen, $k$ will be clipped at the maximum or minimum value respectively.
+
+With $k$ in place, it follows that the length of the regime is also determined. The actual size of the exponent is superimposed by the regime field size, and ultimately the fractional field size is settled.
+
+Now what is left to do is to discard the least significant digits of the fraction that fall off the posit size, if any. That turns out to be an implicit \textit{rounding to lowest}.
+
+However, depending on the specific rounding scheme dictated by the design, a few more operations must be considered.
+
+
+
+Assuming the rounding scheme desired is \textit{round to nearest even}, three bits off the fraction are computed (fig \ref{fig:fraction_before_rounding}):
+\begin{itemize}
+\item guard bit (G): the least significant bit of the sequence of digits that fit the fraction field of the final posit,
+\item round bit (R): the most significant bit of the sequence of discarded digits,
+\item sticky bit (S): $|S^{\dagger}$ i.e. the \textit{or-reduction}\footnote{adopting the Verilog nomenclature, the \textit{or-reduction} operator (\texttt{|}) applies the bitwise \textit{or} to the elements of a vector and returns a scalar.
+% \texttt{|bits} returns $1$ if either bit of \texttt{bits} is $1$.
+} of the sequence of bits to the right of the round bit (i.e. the discarded bits).
+\end{itemize}
+
+\begin{figure}
+    \begin{center}
+    \includegraphics[width=\textwidth]{figures/bits-fraction.drawio.pdf}
+    \caption{Bit-string layout of fraction before rounding, with (G, R, S) bits highlighted}
+    \label{fig:fraction_before_rounding}
+    \end{center}
+\end{figure}
+
+
+\section{In-depth: division of fractions}\label{Approximated_Algorithms}
+\input{chapters/subpages/division_fractions}
