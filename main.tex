@@ -46,6 +46,7 @@
 \usepackage{color}
 \usepackage{url}
 \usepackage{bnf}
+\usepackage{lettrine}
 \usepackage{rotating}
 \usepackage{multirow}
 \usepackage{phdtitle}
@@ -264,10 +265,11 @@ bookmarksopen=true,hidelinks]{hyperref}
 \department {Dottorato di ricerca in Ingegneria dell'Informazione}
 
 % Please fulfil the followed fields with your data
-\author{Federico Rossi} 
-\title{TBD TBD TBD TBD TBD}
-\tutor{}
-\supervisor{M. Cococcioni, S. Saponara}
+\author{Federico ROSSI} 
+\title{Innovative arithmetics for efficient DNN computing:
+HW and SW solutions and their integration in RISC-V platforms}
+\tutor{William FORNACIARI, Leonel SOUSA}
+\supervisor{Marco COCOCCIONI, Sergio SAPONARA}
 \titleimage{img/unipi.png} %please not change
 \phdyear{2022}
 \phdmonth{Month}
@@ -319,18 +321,16 @@ bookmarksopen=true,hidelinks]{hyperref}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Summary
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\selectlanguage{english}
-\input{chapters/summary}
-\selectlanguage{english}
+
+\input{chapters/summary.tex}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Italian Summary
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %There must be an Italian version of the summary
-\selectlanguage{italian}
-\input{chapters/it_summary}
-\selectlanguage{english}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Publications
@@ -361,7 +361,12 @@ bookmarksopen=true,hidelinks]{hyperref}
 \setcounter{page}{1}
 \pagenumbering{arabic}
 
+
 \cleardoublepage
+
+\input{chapters/introduction}
+
+
 \input{chapters/real_reps} % uncomment if you want part I
 \input{chapters/posit_num} % uncomment if you want part I
 \input{chapters/posit_library} % uncomment if you want part I
@@ -370,7 +375,7 @@ bookmarksopen=true,hidelinks]{hyperref}
 
 \input{chapters/posit_fullppu}
 
-
+\input{chapters/conclusions}
 
 \input{chapters/appendix}
 % Insert further chapters using the following syntax
@@ -381,7 +386,7 @@ bookmarksopen=true,hidelinks]{hyperref}
 \phantomsection
 \addcontentsline{toc}{chapter}{\bibname}
 \small
-\bibliographystyle{plain}
+\bibliographystyle{ieeetr}
 \bibliography{thesis}
 
 \end{document}
