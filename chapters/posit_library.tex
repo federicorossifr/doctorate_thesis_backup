@@ -3,7 +3,7 @@
 
 \section{Overview of existing posit libraries}
 
-\lettrine{I}{n} In this chapter we will focus on presenting and analyzing posit libraries, including the one created and maintained by us. We will consider the \texttt{C++} based libraries.
+\lettrine{I}{n} this chapter we will focus on presenting and analyzing posit libraries, including the one created and maintained by us. We will consider the \texttt{C++} based libraries.
 Having software support for a new type is of utmost importance. A software library supporting posits should have the following properties:
 \begin{enumerate}
     \item Can hot-swap the binary32  \textit{float} type without changing much code
@@ -141,7 +141,7 @@ Having this possibility means that we can implement \textit{multiply-add} operat
 
 
 
-\subsection{Fast operations with 0 exponent bits}
+\subsection{Fast operations with 0-bits exponent}
 
 As we described in the previous section the cppPosit library has a class of operations in $\mathcal{L}_0$ that can be carried out with bit manipulations of the posit bit representation. We already discussed the accuracy impact of these operations in Section \ref{subsec:fastArithOps}. In \cite{coco_et_al_jrtip_2020, coco2020sensors} we also evaluated the impact on the processing time of such operations, in particular the activation functions.
 
@@ -192,7 +192,7 @@ In order to reduce both LUT size and their number we can exploit some arithmetic
 \begin{itemize}
     \item Addition and subtraction are respectively symmetric and anti-symmetric. The two tables can be merged into one and only one-half of it is required (above or below the main diagonal).
     \item Multiplication and division can be simplified through logarithm properties. Given $p=x\cdot y$, we can apply $log$ operator on both sides (see \cite{arnold2003interval}), thus obtaining $\log(p) = \log(x\cdot y)$. From logarithm properties this results in \[\log(p) = \log(x)+\log(y)\] Finally, going back with exponentiation we get: \[ p = e^{\log(x)+\log(y)} \] Since tabulation of single operators scales linearly with the Posit size, it is feasible only to store $\exp,\log$ instead of multiplication and division, thus exploiting addition/subtraction LUT for the computation. 
-    \item We can compact multiplication tables even more by exploiting the fast inversion (L1) shown in Section \ref{subsec:fastArithOps}. Suppose to have two Posit numbers $x,y$ and their reciprocates, if we want to provide every multiplication or division combination we would build a LUT like in Table \ref{tab:tab_mul_full}. This table would result in 16 entries for only 4 numbers, hence not manageably growing with Posit size. If we apply the L1 inversion and symmetry of negative values, we only need to store the operations for $x\cdot y$ and $x/y$, thus resulting in a LUT size of only 2 elements for the same amount of numbers, as shown in Table \ref{tab:tab_mul_color}.
+    \item We can compact multiplication tables even more by exploiting the fast inversion ($\mathcal{L}1$) shown in Section \ref{subsec:fastArithOps}. Suppose to have two Posit numbers $x,y$ and their reciprocates, if we want to provide every multiplication or division combination we would build a LUT like in Table \ref{tab:tab_mul_full}. This table would result in 16 entries for only 4 numbers, hence not manageably growing with Posit size. If we apply the $\mathcal{L}1$ inversion and symmetry of negative values, we only need to store the operations for $x\cdot y$ and $x/y$, thus resulting in a LUT size of only 2 elements for the same amount of numbers, as shown in Table \ref{tab:tab_mul_color}.
 \end{itemize}
 
 \begin{table}[]
@@ -281,7 +281,7 @@ This design allows for porting an application between RISC-V architectures, with
 
 \subsection{cppPosit vector implementation}
 
-In this section, we introduce the vectorized extension of the cppPosit library, aimed to provide the vector version of the posit operations. Firstly, we need to take into account the  different operational levels. $\mathcal{L}1$ and $\mathcal{L}2$ operations are the easiest ones to be vectorized; they only require bit manipulation of unsigned or signed integers plus additional encoding and decoding steps. Instead, L3 and L4 operations need to be brought back at the chosen backend and then, in the case of hardware floating-point we can use native SIMD vectorization if any.
+In this section, we introduce the vectorized extension of the cppPosit library, aimed to provide the vector version of the posit operations. Firstly, we need to take into account the  different operational levels. $\mathcal{L}1$ and $\mathcal{L}2$ operations are the easiest ones to be vectorized; they only require bit manipulation of unsigned or signed integers plus additional encoding and decoding steps. Instead, $\mathcal{L}3$ and $\mathcal{L}4$ operations need to be brought back at the chosen backend and then, in the case of hardware floating-point we can use native SIMD vectorization if any.
 
 In order to provide a more general and abstract interface to posit vectorized operations, the architecture has a separate posit vector frontend and a specialized posit vector backend that, in the paper case, implements the vectorized operations using ARM ACLE for SVE.
 
@@ -304,15 +304,15 @@ In order to provide a more general and abstract interface to posit vectorized op
 
 When implementing vectorized operations we have a common template to follow: 
 \begin{itemize}
-    \item Prologue: we need to prepare the data to be fed to the SIMD engine. For posits and L1 operations, this means preparing a vector with the signed integer representing the posits. In the SVE case this means loading into the $Z$ registers the posit holder type content (e.g. \texttt{int16\_t} for posit$\left<16,X\right>$) using the \texttt{svld1(...)} intrinsic. For L3/4 operations we need instead to unpack the posit to the underlying backend (fixed, floating or tabulated) and load the backend type into registers as well, performing a full decoding of the posit type.
+    \item Prologue: we need to prepare the data to be fed to the SIMD engine. For posits and $\mathcal{L}1$ operations, this means preparing a vector with the signed integer representing the posits. In the SVE case this means loading into the $Z$ registers the posit holder type content (e.g. \texttt{int16\_t} for posit$\left<16,X\right>$) using the \texttt{svld1(...)} intrinsic. For $\mathcal{L}3/4$ operations we need instead to unpack the posit to the underlying backend (fixed, floating or tabulated) and load the backend type into registers as well, performing a full decoding of the posit type.
     \item Body: the body contains all the arithmetic and logic functions needed to apply the considered operation. In the SVE case, this may contain the SVE intrinsics that operate on the $Z$ vector registers that contain the posit data. For instance, when implementing the fastSigmoid function we will use the built-in intrinsics \texttt{svasr\_x(...)} for the first right shift and \texttt{sv\-add\_x(...)} for the sum. The first performs the same right shift on all the vector elements while the second performs the addition of the value $(1\ll nbits-2)$ to all the vector elements.
-    \item Epilogue: we need to build back the posit into the result vector from the signed integer we have just manipulated in the function body. For SVE this means invoking the \texttt{svst1(...)} intrinsic on the SVE result pointer obtained in the previous step. For L3/4 operations we need instead to pack the posit up to the frontend, performing a full encoding of the posit type.
+    \item Epilogue: we need to build back the posit into the result vector from the signed integer we have just manipulated in the function body. For SVE this means invoking the \texttt{svst1(...)} intrinsic on the SVE result pointer obtained in the previous step. For $\mathcal{L}3/4$ operations we need instead to pack the posit up to the frontend, performing a full encoding of the posit type.
 \end{itemize}
 
-When vectorizing non-L1 operations that require the posit to be decoded in its components (sign, regime, exponent and fraction) we need to take into account two phases of the prologue. The first and simplest one is the posit conversion to the underlying signed integer holder type, that is the cost of a pointer cast from the posit type to the holder one. This step has practically no cost. The second and hardest one is the vectorization of the posit decoding step since it involves many operations and branches on the bit-string. After this decoding, the function body is the same as applying vectorization to the backend type (native ARM floats in our case).
+When vectorizing not-$\mathcal{L}1$ operations that require the posit to be decoded in its components (sign, regime, exponent and fraction) we need to take into account two phases of the prologue. The first and simplest one is the posit conversion to the underlying signed integer holder type, that is the cost of a pointer cast from the posit type to the holder one. This step has practically no cost. The second and hardest one is the vectorization of the posit decoding step since it involves many operations and branches on the bit-string. After this decoding, the function body is the same as applying vectorization to the backend type (native ARM floats in our case).
 
 The same behaviour holds for the epilogue as well.
-Predictably, both the prologue and epilogue for non-L1 operations will introduce some kind of overhead in function computation, due to the conversion of the posit at the underlying backend. This means that, to see the real effectiveness of this vectorized approach we need to test this on large-sale data and SVE vector sizes.
+Predictably, both the prologue and epilogue for not-$\mathcal{L}1$ operations will introduce some kind of overhead in function computation, due to the conversion of the posit at the underlying backend. This means that, to see the real effectiveness of this vectorized approach we need to test this on large-sale data and SVE vector sizes.
 
 
 

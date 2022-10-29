@@ -1,4 +1,4 @@
-\chapter{Full Posit Processing Unit (PPU)}\label{chap:posit_fullppu}
+\chapter{Full Posit Processing Unit (FPPU)}\label{chap:posit_fullppu}
 
 \lettrine{I}{n} this chapter, we extend the architecture seen in Section 6.5, adding the capability for arithmetic operations between posits - that is, addition, subtraction, multiplication and division.
 
@@ -39,11 +39,11 @@ The input conditioning module:
 
 In the second case, the \texttt{special} signal is forwarded straight to the output of the PPU result. 
 
-Both of the aforementioned cases can be resolved at the posit bit-string level (i.e. without the need for decoding) and don't involve the remaining two intermediate stages.
+Both of the aforementioned cases can be resolved at the posit bit-string level (i.e. without the need for decoding) and do not involve the remaining two intermediate stages.
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.87\textwidth]{figures/extraction.drawio.pdf}
+    \includegraphics[width=0.5\textwidth]{figures/extraction.drawio.pdf}
     \caption{Extraction module}
     \label{fig:extraction_ppu}
 \end{figure}
@@ -75,17 +75,18 @@ The module in charge of decoding the regime is typically identified as the leadi
 
 \paragraph{Naive LZC}
 
-A naive version of an LZC can be implemented using a hardware loop that counts adjacent zeros. The cost of this implementation must be analysed: let's consider the RTL schematic in Figure \ref{fig:lzc_sinthesyzed} for a 16-bit leading zero counter.
+A naive version of an LZC can be implemented using a hardware loop that counts adjacent zeros. The cost of this implementation must be analysed.
+%let's consider the RTL schematic in Figure \ref{fig:lzc_sinthesyzed} for a 16-bit leading zero counter.
 
 
 
 %%%%% make figure larger than main margins: https://tex.stackexchange.com/a/57706/271788
-\begin{figure}[h!]
-    \noindent\makebox[\textwidth]{%
-        \includegraphics[width=1.3\textwidth]{figures/lzc_naive_quartus.pdf}}
-    \caption{Naive 16-bits LZC generated schematic}
-    \label{fig:lzc_sinthesyzed}
-\end{figure}
+%\begin{figure}[h!]
+%    \noindent\makebox[\textwidth]{%
+%        \includegraphics[width=1.3\textwidth]{figures/lzc_naive_quartus.pdf}}
+%    \caption{Naive 16-bits LZC generated schematic}
+%    \label{fig:lzc_sinthesyzed}
+%\end{figure}
 
 
 
@@ -129,7 +130,7 @@ The truth Table gives an idea about how \ref{table:lod21_truth_table} extends on
         \centering
         \includegraphics[
             %scale=1
-            width=0.85\linewidth]{figures/lod2_1.pdf}
+            width=0.67\linewidth]{figures/lod2_11.png}
         \captionof{figure}{\cite{PACoGen}'s LOD 2:1 block}
         \label{fig:pacogen_LOD2_1}
     \end{minipage}\hfill
@@ -233,12 +234,12 @@ Figure \ref{fig:lzc_synthesized} shows the RTL tool-generated schematic of a 16-
 \end{figure}   
 
 
-\begin{figure}
+\begin{sidewaysfigure}
         \centering
         \includegraphics[width=\textwidth]{figures/core_op.vivado.pdf}
         \caption{\textit{Core op} schematic (Vivado)}
         \label{fig:core_op_ppu_schematic_vivado}
-\end{figure}   
+\end{sidewaysfigure}   
 
 
 
@@ -270,7 +271,7 @@ $(1.f) \cdot 2^{-\infty}$ to $(1.f) \cdot 2^{0}$; this means that an arbitrary n
 This is the ideal place where the second instance of the LZC presented in Figure \ref{fig:lzc_synthesized} can be used.
 The figure returned by the LZC module is used to shift the fraction back to its canonical form, and, at the same time, to simultaneously update the total exponent difference.
 
-The parent module -- called \textit{core add/sub} -- selects, using the \textit{have same sign} flag, the correct (total exponent, fraction) pair, together with the \textit{is truncated} flag for later correct rounding computation.
+The parent module -- called \textit{core add/sub} -- selects, using the \texttt{have\_same\_sign} flag, the correct (total exponent, fraction) pair, together with the \texttt{is\_truncated} flag for later correct rounding computation.
 
 \begin{figure}
     \centering
@@ -281,7 +282,7 @@ The parent module -- called \textit{core add/sub} -- selects, using the \textit{
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{figures/add-sub-core.drawio.pdf}
-    \caption{\textit{Core add/sub} (conceptual)}
+    \caption{\textit{Core add/sub} (conceptual). The omitted part of circuit is implement according to \ref{sec:posit_ops}.}
     \label{fig:core_add_sub_schematic_conc}
 \end{figure}%
 
@@ -292,12 +293,12 @@ The parent module -- called \textit{core add/sub} -- selects, using the \textit{
     \label{fig:core_sub_vivado}
 \end{figure}
 
-\begin{figure}
+\begin{sidewaysfigure}
     \centering
     \includegraphics[width=1\textwidth]{figures/core_add_sub_vivado.pdf}
     \caption{\textit{Core add/sub} (Vivado)}
     \label{fig:core_add_sub_vivado}
-\end{figure}%
+\end{sidewaysfigure}%
 
 
 
@@ -341,16 +342,16 @@ With reference to an 8-bit posit division operation, the core divider instance i
         \label{fig:nr_schematic}
     \end{figure}
 
-    \begin{figure}
+    \begin{sidewaysfigure}
         \includegraphics[width=1\textwidth]{figures/div_vivado.pdf}
         \caption{\textit{Core div} (Vivado)}
         \label{fig:div1vivado}
-    \end{figure}
-    \begin{figure}
+    \end{sidewaysfigure}
+    \begin{sidewaysfigure}
         \includegraphics[width=1\textwidth]{figures/div_opened_vivado.pdf}
         \caption{\textit{Core div} opened (Vivado)}
         \label{fig:div2vivado}
-    \end{figure}
+    \end{sidewaysfigure}
 
 
 

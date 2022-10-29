@@ -8,7 +8,7 @@ int main (int argc, char *argv[]){
 
     pZ = p16_mul(pA, pB);
 
-   //To check answer by converting it to double
+    //To check answer by converting it to double
     double dZ = convertP16ToDouble(pZ);
     printf("dZ: %.15f\n", dZ);
 

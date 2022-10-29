@@ -1,7 +1,7 @@
 \chapter{Posit numbers}\label{chap:posit_num}
 
 
-\lettrine{P}{osit} numbers made their first appearance in the work of John L. Gustfason "Beating Floating Point at its Own Game: Posit Arithmetic" \cite{gustafson2017beating}. The idea behind the format was to create a drop-in replacement for binary32 numbers. Posit numbers can be also seen as a new iteration of Universal Numbers (also called \textit{unum}). We can consider Posits as TypeIII unums.
+\lettrine{P}{osit} numbers made their first appearance in the work of John L. Gustfason "Beating Floating Point at its Own Game: Posit Arithmetic" \cite{gustafson2017beating}. The idea behind the format was to create a drop-in replacement for binary32 numbers. Posit numbers can be also seen as a new iteration of Universal Numbers (also called \textit{unum}). We can consider Posits as Type III unums.
 
 
 Type I unums are a super-set of binary32 numbers, that is extended with an additional bit, called \textit{ubit}, that states whether the real number represented by that Unum is an exact binary32 or lies between two consecutive representations. Another difference with binary32 numbers is that unums do not have a predefined length for exponent and fraction fields. 
@@ -107,7 +107,7 @@ According to these two values, we can explicate the rounding, overflow and under
 \begin{itemize}
     \item If we are trying to represent a real value $0 < r < \text{minposit}$ we will saturate it to $minposit$ to avoid underflow to $0$.
     \item If we are trying to represent a real value $r > \text{maxposit} $ we will saturate it to $\text{maxposit}$.
-    \item If we are trying to represent a real value that lies between two exact posits, we need to round it to the nearest value (in terms of L2 distance).
+    \item If we are trying to represent a real value that lies between two exact posits, we need to round it to the nearest value (in terms of $L^2$ distance).
 \end{itemize}
 
 
@@ -156,12 +156,12 @@ Figure \ref{fig:posit8xFractions} shows the comparison of the fraction length be
 
 We can generalize the range where the fraction has the highest amount of bits allocated:
 \begin{equation}\label{eqn:highestFractionBits}
-    \left [ \frac{1}{\text{useed}} , \text{useed} \right [ = \left [ \frac{1}{2^{2^{\text{esbits}}}}, 2^{2^{\text{esbits}}} \right [
+    \left [ \frac{1}{\text{useed}} , \text{useed} \right ) = \left [ \frac{1}{2^{2^{\text{esbits}}}}, 2^{2^{\text{esbits}}} \right )
 \end{equation}
 
 As we can see from Figure \ref{fig:posit8xFractions}, this range is always symmetric around the y-axis, so we have the two following ranges:
 \begin{equation}\label{eqn:highestFractionBitsFull}
- \left ] -\text{useed}, -\frac{1}{\text{useed}} \right ]  ; \left [ \frac{1}{\text{useed}} , \text{useed} \right [ 
+ \left ] -\text{useed}, -\frac{1}{\text{useed}} \right )  ; \left [ \frac{1}{\text{useed}} , \text{useed} \right )
 \end{equation}
 
 Note that both in \eqref{eqn:highestFractionBits} and \eqref{eqn:highestFractionBitsFull}, the sets are open from the side of $\text{useed}$. This is because, by design, the last positive posit with the highest number of fraction bits is the one immediately preceding the posit representing $\text{useed}$.
@@ -401,7 +401,7 @@ Firstly, we need to distinguish the formulations shown in \eqref{eqn:posit0expon
 
 Now, let $x, y = \frac{1}{x}$ be two posits encoded with, respectively $s_x,k_x, f_x$ and $s_y = s_x, k_y, f_y$. Since there is an inversion, if $x \in [-1,1]$ then $y \in (-\infty, -1] \cup [1,\infty)$ (or vice-versa). We want to express $x \cdot y \sim 1$ using the posit representation of a real:
 \begin{equation}\label{eqn:positx0prodInverse}
-    x \cdot y = 2^{k_x+k_y} \cdot \left[ \left (1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}} \right ) \cdot \left (1 + \frac{f_y}{2^{2^{nbits - k_y - 3}}} \right ) \right] \sim 1
+    x \cdot y = 2^{k_x+k_y} \cdot \left[ \left (1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}} \right ) \cdot \left (1 + \frac{f_y}{2^{2^{nbits - k_y - 3}}} \right ) \right] \simeq 1
 \end{equation}.
 
 We need to distinguish two cases:
@@ -417,13 +417,13 @@ Indicating with $P$ the integer representing the posit number, we can test the c
 
 \paragraph{Case a)} When in case a), we know that $k_y = -k_x$ (from inversion of \eqref{eqn:positRealValueExp0}). If we substitute this in \eqref{eqn:positx0prodInverse} we obtain:
 \begin{equation}
-    x \cdot y = 2^{0} \cdot \left[ \left (1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}} \right ) \cdot \left (1 + \frac{f_y}{2^{2^{nbits + k_x - 3}}} \right ) \right] \sim 1
+    x \cdot y = 2^{0} \cdot \left[ \left (1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}} \right ) \cdot \left (1 + \frac{f_y}{2^{2^{nbits + k_x - 3}}} \right ) \right] \simeq 1
 \end{equation}
 
 We then develop the product inside the square brackets, discarding the product between the fraction themselves, introducing no approximation since $f_x = f_y = 0$:
 
 \begin{equation}
-    x \cdot y = 2^{0} \cdot \left[ 1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}}  + \frac{f_y}{2^{2^{nbits + k_x - 3}}} \right] \sim 1
+    x \cdot y = 2^{0} \cdot \left[ 1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}}  + \frac{f_y}{2^{2^{nbits + k_x - 3}}} \right] \simeq 1
 \end{equation}
 
 Since the number must be equal to $1$, we impose the fractional part to be $0$, therefore:
@@ -440,13 +440,13 @@ Therefore, in this case the only transformation needed is $k_y = -k_x$. Since $k
 
 \paragraph{Case b)} When in case b), $k_y = -k_x - 1$ (again from the inversion of \eqref{eqn:positRealValueExp0}). If we substitute this again \eqref{eqn:positx0prodInverse} we obtain:
 \begin{equation}
-    x \cdot y = 2^{-1} \cdot \left[ \left (1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}} \right ) \cdot \left (1 + \frac{f_y}{2^{2^{nbits + k_x - 2}}} \right ) \right] \sim 1
+    x \cdot y = 2^{-1} \cdot \left[ \left (1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}} \right ) \cdot \left (1 + \frac{f_y}{2^{2^{nbits + k_x - 2}}} \right ) \right] \simeq 1
 \end{equation}
 
 Again, we develop the product inside square brackets, discarding the fraction product, now introducing an approximation:
 
 \begin{equation}
-    x \cdot y = 2^{-1} \cdot \left[ 1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}}  + \frac{f_y}{2^{2^{nbits + k_x - 2}}} \right] \sim 1
+    x \cdot y = 2^{-1} \cdot \left[ 1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}}  + \frac{f_y}{2^{2^{nbits + k_x - 2}}} \right] \simeq 1
 \end{equation}
 
 Since the product must be $\sim 1$, we solve by $f_y$, obtaining:
@@ -920,7 +920,7 @@ $(1.f_1) \cdot (1.f_2)$ results in a number $\in [1, 4)$, and just like in the a
 \begin{figure}
     \begin{center}
     % \includegraphics[height=0.7\textheight]{assets/figures/posit_mul_flow.pdf}
-    \includegraphics[width=\textwidth]{figures/posit_mul_flow.pdf}
+    \includegraphics[width=0.90\textwidth]{figures/posit_mul_flow.pdf}
     \caption{Posit multiplication algorithmic flow}
     \label{fig:mulflow}
     \end{center}

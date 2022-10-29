@@ -25,7 +25,7 @@ The IEEE 754 standard for floating point \cite{893287} defines a floating-point 
 \begin{itemize}
     \item Sign (always on 1-bit) $s$
     \item Exponent $e$ (as signed integer) on $E$ bits
-    \item Fractional part of the mantissa $f$ (as an unsigned integer) on $F$ bits
+    \item Numerator of the fractional part of the mantissa $f$ (as an unsigned integer) on $F$ bits
 \end{itemize}
 
 The real value $r$ associated with a given float representation is the following:
@@ -34,7 +34,7 @@ The real value $r$ associated with a given float representation is the following
     r = (-1)^s \cdot 2^{e-k} \cdot (1.f)
 \end{equation}
 
-The expression $1.f$ is a shorthand for $1 + \frac{f}{2^F}$.
+The expression $1.f$ is a shorthand for the mantissa $m = 1 + \frac{f}{2^F} \in [1,2) \subseteq \mathbb{Q}$.
 
 The constant value $k$ is a \textit{bias} applied to the exponent for normalization purposes. The bias value is computed as follows: $k = 2^{E-1}$ - $1$.
 
@@ -47,10 +47,10 @@ The constant value $k$ is a \textit{bias} applied to the exponent for normalizat
 \begin{tabular}{l|lll}
 \hline
           & Exponent bits & Bias  & Fraction bits \\ \hline
-Binary16 &  5             & 15    & 10            \\ \hline
-Binary32  & 8             & 127   & 23            \\ \hline
-Binary64  & 11            & 1023  & 52            \\ \hline
-Binary128 & 15            & 16383 & 112           \\ \hline
+binary16 (half) &  5             & 15    & 10            \\ \hline
+binary32 (single) & 8             & 127   & 23            \\ \hline
+binary64 (double) & 11            & 1023  & 52            \\ \hline
+binary128 (quad) & 15            & 16383 & 112           \\ \hline
 \end{tabular}
 \end{table}
 
@@ -63,7 +63,7 @@ Besides the \textit{normal} representation, there are \textit{special} bit patte
     \item $e = 2^{E} - 1$ and $f \neq 0$: not a real/not a number
 \end{itemize}
 
-Subnormals are a class of numbers that fill the gap of real representations between zero and the minimum normal number (in absolute value). When the exponent $e$ is $0$ and the fraction is non-zero the exponent value in Equation \ref{eqn:float2real} is set to $2^{-k+1}$ and the leading $1$ in the mantissa part is removed (0.f instead of 1.f)
+Subnormals are a class of numbers that fill the gap of real representations between zero and the minimum normal number (in absolute value). When the exponent $e$ is $0$ and the fraction is non-zero the exponent value in Equation \ref{eqn:float2real} is set to $2^{-k+1}$ and the leading $1$ in the mantissa part is removed (0.f instead of 1.f), with $0.f \in [0,1) \subseteq \mathbb{Q}$
 
 A particular mention goes to the representation for the real value $0$, which can be either positive or negative, having two representations.
 
@@ -82,7 +82,7 @@ Generally, a $N$-bit fixed point format has three \textit{fields}:
 
 The real value $r$ represented by a given fixed point in this format is:
 \begin{equation}\label{eqn:fixed2real}
-    r = (-1)^s \cdot \left( i + .f \right)
+    r = (-1)^s \cdot \left( i + 0.f \right)
 \end{equation}
 
 Note that we can see the term $0.f$ in \eqref{eqn:fixed2real} as:
@@ -117,7 +117,7 @@ As we can see this is not directly relatable to the multiplication of representa
 
 \section{The BFloat family: BFloat16 and BFloat8}
 
-The Brain Float16 (BFloat16) format (\cite{burgess2019bfloat}) is a revision of the IEEE binary16 that modifies the number of allocated bits for the different fields:
+The Brain Float16 (BFloat16) format \cite{burgess2019bfloat} is a revision of the IEEE binary16 that modifies the number of allocated bits for the different fields:
 
 \begin{itemize}
     \item Sign (always on 1-bit) $s$
@@ -133,7 +133,7 @@ The format definition stands out for the fact that it shares the same number of 
 
 Thanks to its similarity to the binary32 format, the BFloat16 can be seen as a truncated version of the former. This means that the conversion between the two formats is just a matter of shifting 16 positions left or right.
 
-The Brain Float8 (BFloat8) format (\cite{naveen2019mixed}) is a further compression of the binary16 format, with the following fields:
+The Brain Float8 (BFloat8) format \cite{naveen2019mixed} is a further compression of the binary16 format, with the following fields:
 
 \begin{itemize}
     \item Sign (always on 1-bit) $s$
@@ -151,9 +151,9 @@ Since it shares the same number of exponent bits with binary16, the conversion b
 
 The authors of \cite{naveen2019mixed} also introduced the concept of \textit{stochastic rounding}, mainly used during the training of neural networks.
 
-Suppose we want to round a floating point number $x$, with $s,e,m$ being, respectively, sign, exponent and mantissa (where $m = f/F$). The mantissa $m$ is originally represented on $k'$ bits and needs to be truncated into $\lfloor m \rfloor$ on $k$ bits. Let us define the probability: 
+Suppose we want to round a floating point number $x$, with $s,e,m$ being, respectively, sign, exponent and mantissa $m$ (where $m = 1 + frac$). The fractional part $frac$ is originally represented on $k'$ bits and needs to be truncated into $\lfloor m \rfloor$ on $k$ bits. Let us define the probability: 
 \begin{equation}\label{eqn:bfloat8StochProb}
-    p = \frac{m - \lfloor m \rfloor}{\epsilon}
+    p = \frac{frac- \lfloor frac \rfloor}{\epsilon}
 \end{equation}
 
 where $\epsilon = 2^{-k}$.
@@ -162,8 +162,8 @@ Following the \textit{stochastic rounding approach}, the rounded value of $x$ wi
 \begin{equation}\label{eqn:bfloat8Rounded}
 \text{Round}(x) = 
 \left\{\begin{matrix}
-s \cdot 2^e \cdot ( 1 + \lfloor m \rfloor + \epsilon) & \text{with probability } p \\ 
-s \cdot 2^e \cdot ( 1 + \lfloor m \rfloor) & \text{with probability } 1-p 
+s \cdot 2^e \cdot ( 1 + \lfloor frac \rfloor + \epsilon) & \text{with probability } p \\ 
+s \cdot 2^e \cdot ( 1 + \lfloor frac \rfloor) & \text{with probability } 1-p 
 \end{matrix}\right.
 \end{equation}
 
@@ -176,7 +176,7 @@ The authors also propose automatic exponent management, which adjusts the expone
 
 \section{Logarithmic Number System (LNS)}
 
-The Logarithmic Number System is a system where any number $X$ is represented as follows:
+The Logarithmic Number System \cite{johnson2018rethink} is a system where any number $X$ is represented as follows:
 \begin{equation}\label{eqn:logNumSysSet}
     X \xrightarrow[]{}\{ s,x = \log_b(\left| X \right|) \}
 \end{equation}
@@ -196,7 +196,7 @@ The first property that stands out from this representation is that division, mu
     X^Y \xrightarrow[]{} \left[ \log_b(X ^ Y) \right] = (s_x \oplus s_y)\cdot \left[Y \cdot  \log_b(X)  \right] = Y\cdot x
 \end{equation}
 
-However, addition and subtraction operations are more complicated to represent. In particular, we need to employ Gaussian Logarithms:
+However, addition and subtraction operations are more complicated to represent. In particular, we need to employ natural logarithms:
 \begin{equation}
     s_b(z) = \log_b (1 + b^z)
 \end{equation}

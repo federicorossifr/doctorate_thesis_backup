@@ -36,11 +36,11 @@ However, this approach presents some inconveniences:
 \item it requires $6$ fixed-point products\footnote{$3$ due to 3rd-order term $x*x*x*3.1604\dots$ + $2$ + $1$},
 \item it is accurate just around the point where the series is expanded, as shown in figure \ref{fig:relative_error_00001}.
 \end{itemize}
-A way to circumvent the latter issue comes from employing the Chebyshev polynomials. They are used to provide the best approximation not only around a given point but across an interval.
+A way to circumvent the latter issue comes from employing the Chebyshev polynomials \cite{Hale2015}. They are used to provide the best approximation not only around a given point but across an interval.
 As a trade-off, the better control over the accuracy across this interval comes at the cost of increased computational complexity, compared to the plain Taylor expansion.
 
 
-Applying the third-order Chebyshev polynomials \cite{Hale2015}formula to $1/x$ across the interval $(0.5, 1)$ we obtain
+Applying the third-order Chebyshev polynomials formula to $1/x$ across the interval $(0.5, 1)$ we obtain
 \begin{equation}\label{equ:3rd_order_Chebyshev_polynomial_equation}
 f_{cp_3} = 5.65685 - 11.75737x + 10.64818x^2 - 3.54939 x^3 + \mathcal{O}(x^4)
 \end{equation}
