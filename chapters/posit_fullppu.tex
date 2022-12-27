@@ -7,13 +7,11 @@
 \section{Single-stage Architecture}
 
 Firstly, in the following sections, we will refer to a PPU design with a single stage of computation. This means that the unit is a single combinatory logic component from input to output.
-
 Theoretically, this means that:
 \begin{itemize}
     \item We are sure that, in 1 clock cycle, the component will output its result
     \item The end-to-end latency can negatively affect the drive clock fed to the unit. Indeed, if we imagine the unit being integrated into a more complex system (e.g. a full processor), its inputs and outputs will be fed from/into registers. In order to respect the timing constraints of registers, the clock period must be adjusted to the latency of the processor components. If the PPU unit is has a sufficiently large end-to-end latency, this can impact the clock frequency for the whole processor, slowing down the whole system.
 \end{itemize}
-
 From a high-level perspective, the main building blocks are highlighted in Figure \ref{fig:overview_ppu}.
 The operands are converted into the general FIR datatype through the \textit{extraction} stage; the \textit{computation} stage contains addition, subtraction, multiplication, and division according to the control signal for the operation; finally, the \textit{normalization} stage contains the conversion from the computation FIR output to a posit bit-string.
 
@@ -30,89 +28,52 @@ The operands are converted into the general FIR datatype through the \textit{ext
 \subsection{Extraction}\label{sec:posit_extraction}
 
 The extraction module (Figure \ref{fig:extraction_ppu}) performs a preliminary input conditioning (Figure \ref{fig:input_conditioning_module}) on the posit inputs, then it is followed by the field extraction.
-
 The input conditioning module:
 \begin{enumerate}
     \item performs operand swapping if the second operand encodes a negative value, or the second operand encodes a larger (in absolute) value than the first 
     \item detects special and trivial cases, depending on the operation considered (e.g. we have a sum and one of the two inputs is zero).
 \end{enumerate} 
-
-In the second case, the \texttt{special} signal is forwarded straight to the output of the PPU result. 
-
-Both of the aforementioned cases can be resolved at the posit bit-string level (i.e. without the need for decoding) and do not involve the remaining two intermediate stages.
-
+In the second case, the \texttt{special} signal is forwarded straight to the output of the PPU result.  Both of the aforementioned cases can be resolved at the posit bit-string level (i.e. without the need for decoding) and do not involve the remaining two intermediate stages.
 \begin{figure}
     \centering
     \includegraphics[width=0.5\textwidth]{figures/extraction.drawio.pdf}
     \caption{Extraction module}
     \label{fig:extraction_ppu}
 \end{figure}
-
 \begin{figure}
     \centering
     \includegraphics[width=0.9\textwidth]{figures/posit2fir.drawio.pdf}
     \caption{Posit to FIR module}
     \label{fig:posit2fir_ppu}
 \end{figure}
-
-
-
-
-
-
 \begin{figure}
     \centering
     \includegraphics[width=.75\textwidth]{figures/input_conditioning.pdf}
     \caption{Input conditioning module}
     \label{fig:input_conditioning_module}
 \end{figure}
-
-
-
 \textit{Posit to FIR} (Figure \ref{fig:posit2fir_ppu}) takes a \texttt{N}-bit bitstring encoding a posit and outputs a \texttt{FIR\_SIZE}-bit\footnote{\texttt{1 + TE\_SIZE + FRAC\_SIZE} = \texttt{1 + [(ES + 1) + (clog2(N) + 1)] + (N - 2)}} bistring encoding the concatenation of \textit{sign}, the total exponent \textit{te}, and the fraction \textit{frac}.
 The most complex part of the operation is done by the \textit{posit unpack} module which extracts and decodes the posit fields. The procedure is similar to the extraction of binary32 fields; however, the implementation has more complex steps, since the size of the regime is not pre-determined.
 The module in charge of decoding the regime is typically identified as the leading-zero counter (LZC). The basic idea behind an LZC is an iterative approach (i.e. counting subsequent zeroes). However, there are different implementations for this module, and, in the next paragraphs, we cover their characteristics.
 
 \paragraph{Naive LZC}
-
 A naive version of an LZC can be implemented using a hardware loop that counts adjacent zeros. The cost of this implementation must be analysed.
-%let's consider the RTL schematic in Figure \ref{fig:lzc_sinthesyzed} for a 16-bit leading zero counter.
-
-
-
-%%%%% make figure larger than main margins: https://tex.stackexchange.com/a/57706/271788
-%\begin{figure}[h!]
-%    \noindent\makebox[\textwidth]{%
-%        \includegraphics[width=1.3\textwidth]{figures/lzc_naive_quartus.pdf}}
-%    \caption{Naive 16-bits LZC generated schematic}
-%    \label{fig:lzc_sinthesyzed}
-%\end{figure}
-
-
-
 Notice that this is a long chain of multiplexers and comparators, that grows proportionally -- $\mathcal{O}(n)$ -- to the number of input bits. This means that the longest signal propagation path increases as the number of bits, making this component unsuitable for increasing the frequency of the whole component.
 
 \paragraph{Tree-based LZC}
-
 A tree-based solution can reduce the combinatorial path complexity from $\mathcal{O}(n)$ to $\mathcal{O}(\log(n))$ thus increasing the highest achievable frequency of the component.
-
-
 The design devised by \cite{milenkovic_modular_2015} proposes a so-called modified-tree structure. The computation is divided into groups of 4 bits which are fed into an 8-bits unit, and eventually, \textit{mux}-ed out.
 The downside of this design is that it requires the input to have a number of bits which is a power of $2$ in order to justify its adoption.
-
 \begin{figure}
         \centering
         \includegraphics[width=\textwidth]{figures/milenkovic_quartus1.pdf}
 \end{figure}
-
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{figures/milenkovic_quartus2.pdf}
     \caption{\cite{milenkovic_modular_2015}'s 16-bits LZC generated schematic}
     \label{fig:milenkovic_lzc_quartus}
 \end{figure}
-
-
 A similar design is presented in \cite{dimitrakopoulos_low-power_2008}, which proposes a semi-tree-based approach elaborating on 16 bits at a time. Like the previous design, this can be extended to other powers of $2$ input bits configurations.
 
 \paragraph{Pacogen LZC}
@@ -120,7 +81,6 @@ A similar design is presented in \cite{dimitrakopoulos_low-power_2008}, which pr
 Another design was proposed in \cite{PACoGen}.
 Here, the same basic building block is recursively instantiated, terminating in a simple \textit{and} / \textit{or} gates pair, which make up the base case (figure \ref{fig:pacogen_LOD2_1}).
 The truth table (\ref{table:lod21_truth_table}) of \ref{fig:pacogen_LOD2_1} indicates that, at the lowest level, $k$ counts the number of zeros from the left. A sequence without bit alternation is considered invalid, as the $\text{vld}$ flags reports.
-
 The higher-level hierarchical block for the bits $(4:2)$ is shown in Figure \ref{fig:lod42_00001} and consists of two instances of \ref{fig:pacogen_LOD2_1} together with a \textit{or} gate and a multiplexer that routes out the correct $k$ from the ``child" instance, left-wise padded with either a $0$ or $1$.
 
 The truth Table gives an idea about how \ref{table:lod21_truth_table} extends onwards.
@@ -208,16 +168,16 @@ The truth Table gives an idea about how \ref{table:lod21_truth_table} extends on
     \end{minipage}
 \end{figure}
 
-Figure \ref{fig:lzc_synthesized} shows the RTL tool-generated schematic of a 16-bits LZC.
+%Figure \ref{fig:lzc_synthesized} shows the RTL tool-generated schematic of a 16-bits LZC.
 
 
-\begin{figure}[h!]
-    \noindent\makebox[\textwidth]{%
-        \includegraphics[width=1.3\textwidth]{figures/lzc_pacogen_vivado.pdf}
-    }
-    \caption{\cite{PACoGen}'s 16-bits LZC generated schematic}
-    \label{fig:lzc_synthesized}
-\end{figure}
+%begin{figure}[h!]
+%    \noindent\makebox[\textwidth]{%
+%        \includegraphics[width=1.3\textwidth]{figures/lzc_pacogen_vivado.pdf}
+  %  }
+%    \caption{\cite{PACoGen}'s 16-bits LZC generated schematic}
+%    \label{fig:lzc_synthesized}
+%\end{figure}
 
 
 
@@ -234,12 +194,12 @@ Figure \ref{fig:lzc_synthesized} shows the RTL tool-generated schematic of a 16-
 \end{figure}   
 
 
-\begin{sidewaysfigure}
-        \centering
-        \includegraphics[width=\textwidth]{figures/core_op.vivado.pdf}
-        \caption{\textit{Core op} schematic (Vivado)}
-        \label{fig:core_op_ppu_schematic_vivado}
-\end{sidewaysfigure}   
+%\begin{sidewaysfigure}
+%        \centering
+%        \includegraphics[width=\textwidth]{figures/core_op.vivado.pdf}
+%        \caption{\textit{Core op} schematic (Vivado)}
+%        \label{fig:core_op_ppu_schematic_vivado}
+%\end{sidewaysfigure}   
 
 
 
@@ -258,7 +218,6 @@ First, the FIR signal is unpacked in its 3 components (sign, total exponent, and
 
 The adder/subtractor implements the set of operations described in section \ref{sec:posit_ops}. The majority of the steps required for either operation is shared, hence the reason why a common module.
 As a consequence of the preliminary \textit{pre-condition} step described in section \ref{sec:posit_extraction}, there is here no need to perform any operation to determine the final sign: the first operand is the largest in magnitude, therefore its sign will determine the output's as well. This consideration saves quite some logic.
-
 The fractions are left shifted by a safe\footnote{\texttt{MAX\_TE\_DIFF}: size such that, if the second operand fraction had to be shifted left by the largest total exponent difference, no bits would be lost} constant amount and the second operand fraction is shifted right back by the difference of the total exponents, such that their \textit{effective exponent} is even and fractions are weighted equally.
 Next, the fractions are added/subtracted together -- depending on the \textit{have opposite sign} flag -- before being routed into the \textit{core add} and \textit{core sub} sub-modules. Those implement the steps that differ between the two: the addition module needs to detect whether fraction overflow ($f \ge 2.0$) has occurred\footnote{recall that  that $(1.f_1) + [(1.f_2) \cdot 2^{-b}] \in [1.0, 4.0) \equiv [1.0, 3.999\dots]$, i.e. the integer part of the resulting fraction will, at most, occupy $\lceil\log_2(3)\rceil = 2$ bits} and fix that; the subtraction module needs to do the symmetrical operation, i.e. detect fraction underflow ($f < 1.0$) and fix that.
 
@@ -270,15 +229,14 @@ the resulting fraction\footnote{$(1.f_1) - [(1.f_2) \cdot 2^{-b}] \in [0.0, 2.0)
 $(1.f) \cdot 2^{-\infty}$ to $(1.f) \cdot 2^{0}$; this means that an arbitrary number of zeros can precede the $1$ that can constitute the most significant bit of a fraction.
 This is the ideal place where the second instance of the LZC presented in Figure \ref{fig:lzc_synthesized} can be used.
 The figure returned by the LZC module is used to shift the fraction back to its canonical form, and, at the same time, to simultaneously update the total exponent difference.
-
 The parent module -- called \textit{core add/sub} -- selects, using the \texttt{have\_same\_sign} flag, the correct (total exponent, fraction) pair, together with the \texttt{is\_truncated} flag for later correct rounding computation.
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\textwidth]{figures/core_add_vivado.pdf}
-    \caption{\textit{Core add} (Vivado)}
-    \label{fig:core_add_vivado}
-\end{figure}%
+%\begin{figure}
+%    \centering
+%    \includegraphics[width=\textwidth]{figures/core_add_vivado.pdf}
+%    \caption{\textit{Core add} (Vivado)}
+%    \label{fig:core_add_vivado}
+%\end{figure}%
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{figures/add-sub-core.drawio.pdf}
@@ -286,35 +244,34 @@ The parent module -- called \textit{core add/sub} -- selects, using the \texttt{
     \label{fig:core_add_sub_schematic_conc}
 \end{figure}%
 
-\begin{figure}
-    \centering
-    \includegraphics[width=1\textwidth]{figures/core_sub_vivado.pdf}
-    \caption{\textit{Core sub} (Vivado)}
-    \label{fig:core_sub_vivado}
-\end{figure}
+%\begin{figure}
+%    \centering
+%   \includegraphics[width=1\textwidth]{figures/core_sub_vivado.pdf}
+%    \caption{\textit{Core sub} (Vivado)}
+%    \label{fig:core_sub_vivado}
+%\end{figure}
 
-\begin{sidewaysfigure}
-    \centering
-    \includegraphics[width=1\textwidth]{figures/core_add_sub_vivado.pdf}
-    \caption{\textit{Core add/sub} (Vivado)}
-    \label{fig:core_add_sub_vivado}
-\end{sidewaysfigure}%
+%\begin{sidewaysfigure}
+%    \centering
+%    \includegraphics[width=1\textwidth]{figures/core_add_sub_vivado.pdf}
+%    \caption{\textit{Core add/sub} (Vivado)}
+%    \label{fig:core_add_sub_vivado}
+%\end{sidewaysfigure}%
 
 
 
 
 \subsubsection{Multiplier}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\textwidth]{figures/mul_vivado.pdf}
-    \caption{\textit{Core multiplier schematic} (Vivado)}
-    \label{fig:mul_vivado}
-\end{figure}
+%\begin{figure}
+%    \centering
+%    \includegraphics[width=\textwidth]{figures/mul_vivado.pdf}
+%    \caption{\textit{Core multiplier schematic} (Vivado)}
+%    \label{fig:mul_vivado}
+%\end{figure}
 
 
 The multiplier handles the production of the two fractional components of the operands and sums their total exponents (\textit{te}). Similarly to the addition, fraction overflow can occur: in this case, a flag \textit{is truncated} is used to notify whether the least significant bit is a $1$. The fraction is shifted right by 1 in the canonical form and the total exponent is incremented by 1 to adjust the fraction shift.
-
 The unsigned integer multiplier present in the schematic is inferred by the synthesis tool. 
 % \hl{check}
 %
@@ -325,16 +282,11 @@ The unsigned integer multiplier present in the schematic is inferred by the synt
 
 \subsubsection{Divider}\label{divider_hardware_ppu}
 
-% \hl{reformulate if time allows}
-
 The core divider module implements the steps described in section \ref{Approximated_Algorithms}.
-
 Conceptually, the divider scheme is shown in Figure \ref{fig:nr_schematic}.
-
 First, an approximation of the reciprocate of the second operand mantissa is computed using Algorithm \ref{alg:reciprocal_approx_modified_drom} adapted to fixed-point arithmetic.
 Next, the output is used as input inside a single Newton-Raphson stage.
-
-With reference to an 8-bit posit division operation, the core divider instance is synthesized as in Figure \ref{fig:div1vivado} and \ref{fig:div2vivado}. We compared the module accuracy with the one presented by \cite{PACoGen} in \ref{table:comparison_div_against_pacogen_table}.
+We compared the module accuracy with the one presented by \cite{PACoGen} in \ref{table:comparison_div_against_pacogen_table}.
 
     \begin{figure}
         \includegraphics[width=1\textwidth]{figures/newton_raphson_drawing.drawio.pdf}
@@ -342,16 +294,16 @@ With reference to an 8-bit posit division operation, the core divider instance i
         \label{fig:nr_schematic}
     \end{figure}
 
-    \begin{sidewaysfigure}
-        \includegraphics[width=1\textwidth]{figures/div_vivado.pdf}
-        \caption{\textit{Core div} (Vivado)}
-        \label{fig:div1vivado}
-    \end{sidewaysfigure}
-    \begin{sidewaysfigure}
-        \includegraphics[width=1\textwidth]{figures/div_opened_vivado.pdf}
-        \caption{\textit{Core div} opened (Vivado)}
-        \label{fig:div2vivado}
-    \end{sidewaysfigure}
+    %\begin{sidewaysfigure}
+    %    \includegraphics[width=1\textwidth]{figures/div_vivado.pdf}
+    %    \caption{\textit{Core div} (Vivado)}
+    %    \label{fig:div1vivado}
+    %\end{sidewaysfigure}
+    %\begin{sidewaysfigure}
+    %    \includegraphics[width=1\textwidth]{figures/div_opened_vivado.pdf}
+    %    \caption{\textit{Core div} opened (Vivado)}
+    %    \label{fig:div2vivado}
+    %\end{sidewaysfigure}
 
 
 
@@ -376,14 +328,11 @@ The \textit{normalization} stage rebuilds the posit from the fields output by th
 
 The FIR number is unpacked in sign (\texttt{sign}), exponent (\texttt{total\_exp}), and fraction (\texttt{frac\_full}) fields.
 \texttt{frac\_full} represent the full fraction, formatted as a \texttt{Fx<0, \_>} fixed-point, without any truncation being applied from the previous (computation) stage.
-
 Within ``pack fields" module the total exponent is separated into $k$ (regime value) and $e$ (exponent value). Hardware-wise this can be implemented with two shifts: \texttt{k = total\_exp >> ES}, \texttt{exp = total\_exp - (k << ES)}, that corresponds to form and remainder of the division of the total exponent by 2.
 The value of $k$ determines the regime size and, as a consequence, the remaining fields, including the size of the final fraction. 
 The fraction, combined with its final length determines the value of the rounding bits (Guard, Round, Sticky) as brought to the attention in figure \ref{fig:fraction_before_rounding}.
-
 ``Posit encoder" combines together the fields into one bit-string, which is the non-rounded posit.
 Then, \textit{nearest-even} rounding is applied: this is a simple bit increment on posit based on the logic value of the other input flags.
-
 Lastly, the sign is set: this consists of either no intervention if the resulting posit is meant to represent a positive value (sign = 0), or bit-string two's complement otherwise (sign = 1).
 
 
@@ -451,7 +400,6 @@ Lastly, the sign is set: this consists of either no intervention if the resultin
 \section{Pipelined architecture}\label{pipelined_ppu_section}
 
 
-The design presented in the previous section was based on a single-stage data path.
 
 
 \begin{figure}
@@ -463,7 +411,7 @@ The design presented in the previous section was based on a single-stage data pa
     \caption{Non-pipelined vs pipelined circuit} 
     \label{fig:pipeline_vs_nonpipeline}
 \end{figure}
-
+The design presented in the previous section was based on a single-stage data path.
 Pipeline-ing is a common technique adopted in digital design and computer architecture to increase the frequency of the computations. In practice we decompose a long combinatory circuit with a delay of $t_{pd_0}$ into several $N$ shorter combinatory circuits that have different delays $t_{pd_1}, \dots t_{pd_{N}}$, each one smaller than $t_{pd_0}$. This helps loosen the \textit{setup} and \textit{hold} time requirements of the hardware registers;  as a consequence, the overall circuit can operate at higher frequencies. The throughput, defined as the inverse of time between two different $d_{out}$ presented on the output, goes from $1/clk_1$ to $1/clk_2$, and increases according to it.
 The latency, on the other hand, defined as the time it takes for a given input to traverse the sequence and turn up on the output, alters from $1/clk_1$ to $N \cdot (1/clk_2)$, which may be larger or smaller than the initial one
 
@@ -485,12 +433,7 @@ With reference to Figure \ref{fig:pipeline_vs_nonpipeline}, the \textit{speedup}
 
 
 As a first step of the pipelined PPU, we separated the combinatory path between each top level stage: we put one registers block between the \textit{extraction} and \textit{operations} stages, and another one between \textit{operations} and \textit{normalization} stage (Figure \ref{fig:top_p2f_00000001}  $\rightarrow$ \ref{fig:top_all_PL2}).
-
 In the second step, we add a register block inside the \textit{computation} module -- specifically, the core divider; this  enabled us to break the critical path inside the divider unit. This critical path was due to the \textit{fast reciprocate} + \textit{Netwon Raphson} combinatorial circuit (Figure \ref{fig:top_all_PL3}).
-
-
-
-Since we introduce a non-homogeneous subdivision of stages across the different modules, we needed to orchestrate the different stages with a specific control unit.
 
 
 
@@ -508,23 +451,14 @@ Since we introduce a non-homogeneous subdivision of stages across the different 
 \end{figure}
 
 
-
+Since we introduce a non-homogeneous subdivision of stages across the different modules, we needed to orchestrate the different stages with a specific control unit.
 The timing diagram in Figure \ref{fig:timing_diagram_4_stagesdiv_3stagesothers_with_pipelining}  better explains the previous statement: each \textit{non-div} operation in the pipeline traverses  the three \textit{execution}-\textit{computation}-\textit{normalization} (E-C-N) stages; meanwhile, a  \textit{div} operation also traverses the two sub-stages (C1, C2) inside the \textit{computation} stage.
-
 It is clear that for each transition from a \textit{non-div} to a \textit{div} operation we need to ignore the output for one cycle: this comes from \textit{div} having one additional stage in the pipeline.
-
 On the other hand, a transition from a \textit{div} to a  \textit{non-div} operation requires the \textit{non-div} operation to stall its execution. E and C would be able to run concurrently, however, the normalization stage would conflict with the previous operation. Stalling the execution -- anytime before the conflict -- is the conventional way to go around this.
 
-
 With these asymmetries we required a proper control unit running a finite state machine able to control the \textit{div}-\textit{non-div} (and vice-versa) transitions, emitting \textit{stall} and \textit{valid-output} signals to the core PPU and output respectively.
-
 To mitigate this circumstance we can adopt two different: the first is a compiler modification that involves intercepting the transitions from \textit{div} to \textit{non-div} and interposing a \texttt{nop} instruction.
-
 The second solution consists in slowing down the rest of the operations by one cycle, obtaining the same number of cycles for every operation in the PPU.
-
-
-
-
 
 
 \begin{figure}
@@ -563,8 +497,8 @@ The second solution consists in slowing down the rest of the operations by one c
 \end{figure}
 
 
-
-Plots in Figures \ref{fig:spartan7_stages_vs_freqlatency_64_32_8_2} and \ref{fig:spartan7_stages_vs_freqlatency_64_64_16_2} show the variations of highest frequency/lowest latency achievable as the number of pipeline stages increases\footnote{specifically, moves from no pipeline to 3 and 4 stages, as described}, on a Spartan7 \texttt{xa7s6cpga196-2I} FPGA device, in two different configurations: figure \ref{fig:spartan7_stages_vs_freqlatency_64_32_8_2} is referred to a  PPU core supporting $P\langle8,2\rangle$ posits + conversions to single-precision floating point, figure \ref{fig:spartan7_stages_vs_freqlatency_64_64_16_2} is referred to a PPU core supporting $P\langle16,2\rangle$ posits + conversions to double-precision floating point.
+\newpage
+Plots in Figures \ref{fig:spartan7_stages_vs_freqlatency_64_32_8_2} and \ref{fig:spartan7_stages_vs_freqlatency_64_64_16_2} show the variations of highest frequency/lowest latency achievable as the number of pipeline stages increases\footnote{specifically, moves from no pipeline to 3 and 4 stages, as described}, on a Spartan7 \\\texttt{xa7s6cpga196-2I} FPGA device, in two different configurations: figure \ref{fig:spartan7_stages_vs_freqlatency_64_32_8_2} is referred to a  PPU core supporting $P\langle8,2\rangle$ posits + conversions to single-precision floating point, figure \ref{fig:spartan7_stages_vs_freqlatency_64_64_16_2} is referred to a PPU core supporting $P\langle16,2\rangle$ posits + conversions to double-precision floating point.
 As expected, in both cases the maximum frequency grows with the number of stages ($\sim \mathcal{O}(\log(n))$) -- as the delay of progressively shorter paths decreases.
 
 
@@ -591,14 +525,11 @@ As expected, in both cases the maximum frequency grows with the number of stages
 
 \subsection{Power}
 Typically, the static power is constant regardless of the circuit's current operating state; indeed, it consists of leakage currents from supply to ground via the transistors.
-
 Meanwhile, the dynamic power is the one consumed by transistors due to the switching activity.
-
 We can model the total power consumption of a circuit as:
 \begin{equation}\label{equ:power_cmos_equation}
 P_{tot} = \underbrace{V_{CC} \cdot I_{leak}}_{P_{static}} + \underbrace{\alpha \cdot C \cdot V_{CC}^2 \cdot f}_{P_{dynamic}}
 \end{equation}
-
 where $V_{CC}$ is the supply voltage, $I_{leak}$ is the total leakage current, $\alpha$ is the activity factor, $C$ is the driven capacitance and $f$ is the operating clock frequency of the circuit.
 
 
@@ -612,15 +543,10 @@ If the slack is positive all signals respect the requirements, thus we can achie
 
 We generated, tested and validated, several PPU configurations with all their algebraic operations. Then, we used the Xilinx Vivado suite to proceed with the hardware synthesis of our component.
 
-
-% --------------------------------------------------------
-
-
 The core logic element of Xilinx FPGAs is the so-called Configurable Logic Block (CLB). A CLB contains logic slices and it is connected to the interconnection matrix via a dedicated switch. Slices are the basic resource used to synthesize designs: in particular, they build Lookup Tables (LUT) and Registers. LUTs can be used to implement complex combinatorial logic while registers are used to implement sequential logic. Additionally, multiplexers are embedded within slices to route internal signals.
 
 The PPU module is intended to be tightly coupled to a more complex system (e.g. a complete processor unit). In order to characterize our unit, we leveraged the out-of-context (OOC) synthesis mode, which simulates the pin connection for inputs and outputs without the need of an external driver.
 Synthesizing or implementing a module out of context requires that the tools be run in an ``out-of-context" mode\footnote{\url{https://docs.xilinx.com/r/2021.2-English/ug905-vivado-hierarchical-design/Out-of-Context-Commands}}.
-
 Using the OOC mode has the following implications:
 \begin{itemize}
 \item external signals are not routed to the I/O pins of the chip. This means that input and output signals do not need to stretch through the entire chip
@@ -628,7 +554,6 @@ Using the OOC mode has the following implications:
 \end{itemize}
 
 We run the power, timing and utilization reports on on three different Xilinx FPGA families -- Spartan7, Kintex7, and Virtex UltraScale+ -- using different posit/float datatype formats, as reported in Tables (in Appendix) \ref{table:table_xa7s6cpga196-2I}, \ref{table:table_xc7k325tffg900-2}, \ref{table:table_xcku060-ffva1156-3-e} and \ref{table:table_xcvu23p-fsvj1760-3-e}, respectively.
-
 Tables \ref{table:table_xa7s6cpga196-2I}, \ref{table:table_xc7k325tffg900-2}, \ref{table:table_xcvu23p-fsvj1760-3-e}, \ref{table:table_xcku060-ffva1156-3-e} show  to the following:
 \begin{itemize}
     \item the fastest speed can be reached on the Virtex UltraScale+ which -- everything else being equal\footnote{e.g. (WORD, F, N, ES) = (64, 0, 8, 0)} -- can operate at $75 \%$ and $126 \%$ higher clock rate\footnote{highest clock rate defined as the reciprocating of the smallest clock period which, in turn, is defined as the clock period (T) minus the Worst Negative Slack (WNS). WNS is the margin between the current clock period and the smallest clock period the design could operate at, without violating the setup time} than the Kintex7 and Spartan7 respectively. This is a direct consequence of the fabrication technologies of those chips: 16\footnote{Virtex\textregistered UltraScale+\textsuperscript{TM} \url{https://www.xilinx.com/products/silicon-devices/fpga/virtex-ultrascale-plus.html}} vs 28\footnote{Kintex\textregistered-7 \url{https://www.xilinx.com/products/silicon-devices/fpga/kintex-7.html}} vs 28\footnote{Spartan\textregistered-7 \url{https://www.xilinx.com/products/silicon-devices/fpga/spartan-7.html}} nanometers.
@@ -644,14 +569,10 @@ Tables \ref{table:table_xa7s6cpga196-2I}, \ref{table:table_xc7k325tffg900-2}, \r
 
 In order to complement and back up the claims stated in section \ref{Approximated_Algorithms}, we choose one of the most common works in the literature related to Posit core generators, to compare our own design against.
 PACoGen \cite{PACoGen} is a scientific paper published in mid 2019 where the authors designed one of the first \textbf{p}osit \textbf{a}rithmetic \textbf{co}re \textbf{gen}erators (hence the acronym). The foremost reason why this was chosen as a reference target, is that its HDL implementation was released as open-source\footnote{\url{https://github.com/manish-kj/PACoGen}} under the BSD 3-Clause License.
-
-
 The source code presents itself as three compartmentalized folders, one for each supported binary operation, i.e. \textit{add}, \textit{mul}, \textit{div}, each of which is implemented in a single HDL description file -- leaving thus little room for code (and resources) reuse.
 
 The promise of PACoGen is to generate cores supporting operations over \textit{any} posit format.
-
 The implementations of the adder and multiplier are as straightforward as they can get, as they can always produce exact results.
-
  The division, however, has room for compromises and original choices. The way they go around that is the ``approximated algorithm" route: a  LUT storing the $M$ most significant bits of the reciprocate of the fractions followed by $S$ Newton Raphson iterations (Figure \ref{fig:pacoge_divider_architecture}), narrowing down the accuracy at the finest level desired. The number of Newton Raphson iterations is:
     \begin{equation*}\label{equ:regime_k_equation}
         S = \begin{cases}
@@ -671,21 +592,15 @@ The implementations of the adder and multiplier are as straightforward as they c
 
 
 PACoGen does not support out of the box the posit formats $P\langle\_, 0\rangle$, which is unfortunate since, together with $P\langle16, 1\rangle$ and $P\langle32, 2\rangle$, $P\langle8, 0\rangle$ was the standard $8$-bit posit type at the time this work was carried out\footnote{The posit standard was ratified on March 2, 2022 (\url{https://posithub.org/docs/posit_standard-2.pdf}), pinning the exponent size at $2$ for any posit size $N$}.
-
 To work around the limitation of not being able to compare division results between different configurations of posits, we forked the repository and retrofitted all three modules to support the $ES = 0$ posits class.
-
 
 The result of the comparison (using the setup shown in Figure \ref{fig:comparison_against_pacogogen_dut}), generated by comparing the division module
 for all the desired combinations of posit formats is reported in Table \ref{table:comparison_div_against_pacogen_table}, where \textit{LUT\_IN} and \textit{LUT\_OUT} are the sizes of the LUT used to store the precomputed most significant bits of the reciprocate of $\text{mant}_2$, interpreted as \texttt{Fx<1, B>} as wholly described in section \ref{aot_reciprocal_lut_technique}; and \textit{NR} indicates the number of Newton Raphson iterations. These three parameters are hard-coded in the original version of PACoGen.
 The ``wrong [\%]" columns report the percentages of results that differ from the ground truth division between two posits: these are tested against our software library (and others, where applicable).
 Recall that our divider consists of one Newton Raphson iteration preceded by what has been referred to as \textit{fast reciprocate} (figure \ref{fig:reciprocal_unsigned_workflow}).
 
-
 These inexactnesses involve, in almost $100 \%$ of the cases, the least significant bit, which is, for the large part, always a fraction bit. This means that these ``errors" are as meaningless as they can get, both for PACoGen and ours.
-The benefit provided by our approach in terms of accuracy, up to 16-bits posit, is also crystal clear.
-
-
-Figure \ref{fig:comparison_against_pacogogen_dut_waveforms} shows waveforms of the comparison between PACoGen and proposed: the last four traces indicate -- when non-zero -- that an inexact posit division happened. The density of the \textit{spikes} gives a qualitative indication of their inexactness. The traces suffixed with \textit{off by 1} indicate that only the least significant bit is off, which is \~ always. These qualitative indicators are quantified in Table \ref{table:comparison_div_against_pacogen_table}.
+The benefit provided by our approach in terms of accuracy, up to 16-bits posit, is also crystal clear. Figure \ref{fig:comparison_against_pacogogen_dut_waveforms} shows waveforms of the comparison between PACoGen and proposed: the last four traces indicate -- when non-zero -- that an inexact posit division happened. The density of the \textit{spikes} gives a qualitative indication of their inexactness. The traces suffixed with \textit{off by 1} indicate that only the least significant bit is off, which is \~ always. These qualitative indicators are quantified in Table \ref{table:comparison_div_against_pacogen_table}.
 
 
 \begin{figure}
@@ -700,22 +615,22 @@ Figure \ref{fig:comparison_against_pacogogen_dut_waveforms} shows waveforms of t
 \begin{table}
 \begin{center}
 \begin{savenotes}
-\begin{tabular}{ccccccccc}
+\begin{tabular}{ccccccccccc}
     \toprule
-     & & \multicolumn{4}{c}{PACoGen} & & \multicolumn{2}{c}{proposed} \\
-    \cmidrule{3-6} \cmidrule{8-9}
-    N & ES & LUT IN & LUT OUT & NR & wrong [\%] & & NR & wrong [\%] \\
+     & & \multicolumn{5}{c}{PACoGen} & & \multicolumn{3}{c}{proposed} \\
+    \cmidrule{3-7} \cmidrule{9-11}
+    N & ES & LUT IN & LUT OUT & NR & wrong [\%] & Power [mW] & & NR & wrong [\%] & Power [mW] \\
     \midrule \midrule
-    8 & 0 & 8 & 9 & 0 & 4.8 & & 1 & \textbf{1.4} \\
-    8 & 1 & 8 & 9 & 0 & 5.4 & & 1 & \textbf{1.2} \\
-    8 & 2 & 8 & 9 & 0 & 9.3 & & 1 & \textbf{2.1} \\
-    8 & 3 & 8 & 9 & 0 & 13.5 & & 1 & \textbf{4.2} \\
-    8 & 4 & 8 & 9 & 0 & 16.4 & & 1 & \textbf{7.5} \\
+    8 & 0 & 8 & 9 & 0 & 4.8 & 15.0 & & 1 & \textbf{1.4} & \textbf{6.0} \\
+    8 & 1 & 8 & 9 & 0 & 5.4 & 14.0 & & 1 & \textbf{1.2} & \textbf{6.0} \\
+    8 & 2 & 8 & 9 & 0 & 9.3 & 13.0 & & 1 & \textbf{2.1} & \textbf{6.0} \\
+    8 & 3 & 8 & 9 & 0 & 13.5 & 13.5   & & 1 & \textbf{4.2} & \textbf{6.0} \\
+    %8 & 4 & 8 & 9 & 0 & 16.4 &   & & 1 & \textbf{7.5} \\
     \midrule
-    16 & 0 & 8 & 9 & 1 & 10.0 & & 1 & \textbf{1.5} \\
-    16 & 1 & 8 & 9 & 1 & 10.0 & & 1 & \textbf{0.6} \\
-    16 & 2 & 8 & 9 & 1 & 8.8 & & 1 & \textbf{0.5} \\
-    16 & 3 & 8 & 9 & 1 & 9.0 & & 1 & \textbf{0.1} \\
+    16 & 0 & 8 & 9 & 1 & 10.0 & 22.3 & & 1 & \textbf{1.5} & \textbf{14.0}   \\
+    16 & 1 & 8 & 9 & 1 & 10.0 & 18.0 & & 1 & \textbf{0.6} & \textbf{14.0}  \\
+    16 & 2 & 8 & 9 & 1 & 8.8 &  19.0 & & 1 & \textbf{0.5} & \textbf{14.0}   \\
+    16 & 3 & 8 & 9 & 1 & 9.0 & 18.2 &  & 1 & \textbf{0.1} & \textbf{14.0}  \\
     \bottomrule
 \end{tabular}
 \end{savenotes}

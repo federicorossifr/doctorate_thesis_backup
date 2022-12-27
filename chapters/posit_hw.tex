@@ -11,6 +11,15 @@ In order to access the RISC-V architecture for customization of the ISA and prog
     \item The Ariane RISC-V FPGA core. This core is a 6-stage (2-stage speculative frontend, instruction decoding, issuing, executing and committing), single-issue, in-order CPU. It embeds a 64-bit RISC-V instruction set with \texttt{I, M, A, C} subsets. It also supports \texttt{M, S, U} privilege levels, allowing the possibility to execute any Unix-like operative system on it. The core is completely open-source and extensible using SystemVerilog.
 \end{itemize}
 
+\subsection{Impact of new ISA instructions}
+Adding a new instruction to an instruction set architecture (ISA) can have a significant impact on the compiler for that ISA. The compiler is responsible for translating high-level programming languages into machine code that can be executed by the processor. This machine code consists of a series of instructions from the ISA.
+
+When a new instruction is added to the ISA, the compiler must be updated to recognize and handle this new instruction. This may involve modifying the compiler's parser to recognize the syntax of the new instruction, as well as updating the code generation and optimization algorithms to correctly generate machine code for the new instruction.
+
+In addition to the changes required to the compiler itself, the addition of a new instruction may also require updates to other tools in the software development ecosystem, such as assemblers, disassemblers, and debugging tools. It may also require changes to the operating system and other system software to support the new instruction.
+
+As we will see in the next section, we avoided most of the impacts on the compiler by exploiting inline assembly inserted in a C++ header, \textit{making our extension portable across all RISC-V GCC compilers.} However, we needed to modify the \textit{cppPosit} library in order to target the specific extension at compilation time.
+
 \section{Lightweight Posit Processing Unit (PPU)}
 
 In \cite{ppulight}, we leveraged the RISC-V custom opcode space to introduce new posit instructions inside a RISC-V processor core.
@@ -22,6 +31,7 @@ However, we decided to diverge from previous works in two different ways, one at
     \item At the software level we decided not to modify any element of the C compiler toolchain, making the overall software library completely portable on any modern RISC-V C compiler. We indeed make use of inline assembly instruction emission directly from C code, then wrapped in a high-level intrinsic interface. Everything is finally self-contained inside a single header file.
 \end{itemize}
 
+
 As a consequence of these two points, we assert that our light PPU can be used in two different ways (see Figure \ref{fig:use_cases}):
 \begin{itemize}
     \item If the RISC-V processor embeds an FPU, the PPU$^{light}$ can be used as a wrapper, providing data compression by a factor up to 4, with little accuracy degradation. The cost of compression and decompression is the cost of converting a posit to a float and vice-versa.
@@ -29,24 +39,15 @@ As a consequence of these two points, we assert that our light PPU can be used i
 \end{itemize}
 
 Figure \ref{fig:use_cases} shows an example of the two possible approaches: in the top one, we employ the PPU$^{light}$ alongside the  FPU  and  the  ALU,  supporting  both  floating  point  and fixed  point  as  a  back-end  of  our  operation.  In  the  bottom one, we put the  PPU$^{light}$ in a scenario where only the ALU is present, thus enabling posit computation with a pure fixed-point approach. Note that in both cases, our approach is non-disruptive. This means that the existing architecture remains untouched, with just the addition of a new module. From a software-level perspective, this offers the highest transparency possible.
-
-
 \begin{figure}
     \centering
     \includegraphics[width=0.5\linewidth]{img/use_cases.png}
     \caption{A visualization of the two possible use cases of the PPU$^{light}$. }
     \label{fig:use_cases}
 \end{figure}
-
-
-%We extended the RISC-V ISA to support posit operations keeping in mind the minimalism of RISC-V. The core idea is to implement basic posit operations (addition, multiplication and others) using other wider types as backends. Therefore, we did not introduce new ad-hoc registers for posits. Instead, we aimed to reuse existing floating point and integer registers, providing conversion instructions from/to floating point (on float registers) and fixed point (on integer registers) numbers. 
-
 Note that, unlike floating point numbers, when converting between posit and fixed point, the size of the latter depends on the posit characteristics. From now on we will refer to  a fixed point with $N$ overall bits and $N/2$ bits for the mantissa  as fx$\left<N\right>$. Then, a posit$\left<8,0\right>$ will be converted to fx$\left<16\right>$,  a posit$\left<16,0\right>$ to fx$\left<32\right>$ and a posit$\left<16,1\right>$ to fx$\left<64\right>$.
-
 Since we employ posits with an overall size of 16 or 8 bits, we are performing a \hl{lossy} data compression by a factor of 2 or 4 if we start from an IEEE FP32 format (maintaining a similar \hl{inference} accuracy, in machine learning and neural network tasks, as demonstrated in our previous works \cite{coco_et_al_ieeespm_2020,coco2020sensors}). Moreover, even if we use a wider backend to perform computations, the data expansion is performed only within the posit processing unit. Therefore, we are transferring compressed data from memory to CPU integer/float registers. This means that just by using posits as a \hl{lossy} compressed information storage can reduce the amount of data transferred up to a factor 4.
-
 The instruction encoding uses the suffix \texttt{'b0001011} (6 least significant bits) that is reserved for custom ISA extension.
-
 As listed in Table \ref{tab:rvxposit}, we added the following instructions:
 \begin{itemize}
     \item Floating point and posit conversions
@@ -308,7 +309,6 @@ As listed in Table \ref{tab:rvxposit}, we added the following instructions:
 
 Once the instructions have been encoded we need to provide a high-level interface to use them. The idea is to implement a C intrinsic for each instruction exploiting the inline assembly \texttt{\_\_asm\_\_} operator to emit the byte code associated with the specific instruction.
 This approach avoids us to implement the code generation inside the compiler. Instead, we let the compiler choose the proper registers for the intrinsic exploiting C/C++ register allocation with the keyword \texttt{register}.
-
 Listing \ref{lst:fcvtin} shows an intrinsic example for the float to posit$\left<8,0\right>$ conversion. The many \texttt{.set} directives are used to set RISC-V register identifiers. The \texttt{.byte} directive is used to emit the four bytes that compose the instruction. Comparing the four bytes of the instruction with the encoding in Table \ref{tab:rvxposit} we can see that both \texttt{rs1} and \texttt{rd} (source and destination register) are not being explicitly set in the intrinsic. Finally, the two register allocations in the function header use the RISC-V standard register names for input and output passing.
 \vspace{1em}
 \begin{lstlisting}[
@@ -336,18 +336,13 @@ int __fcvt_f32_p8 (float a) {
  return result;
 }
 \end{lstlisting}
-
 We instrumented the cppPosit library to be compiled with specific flags to directly use said hardware instructions instead of using software emulation. For example, without hardware support, the conversion between float and posit needs a series of bit manipulations, done in software. If we provide PPU support the same conversion results in a single call to the \texttt{FCVT.S.*/FCVT.*.S} instruction. 
-
 This approach has three key aspects:
 \begin{itemize}
     \item We implemented some core posit operations that can not be implemented as $\mathcal{L}1$ operations
     \item We discarded other slow instructions that require activation and withdrawal like in an external execution unit.
     \item We may seamlessly run in a super-scalar environment with multiple parallel execution units since we only used native integer and floating point registers.
 \end{itemize}
-
-
-
 To provide a circuit design for our PPU$^{light}$ we considered several key points to simplify the final logic design:
 \begin{itemize}
     \item IEEE floating point values are encoded in a module and sign-like representation while posits are encoded using 2's complement representation. Therefore, when converting from IEEE floats we just ignore the sign and build the positive posit. Then we use the sign to apply the 2's complement to the result if negative.
@@ -372,8 +367,6 @@ To provide a circuit design for our PPU$^{light}$ we considered several key poin
 
 
 In Figure \ref{fig:p16_fp32_circ}, we show \hl{a simplified} circuit for conversion from posit$\left<16,0\right>$ to FP32. The 16-bit regime decoder module is implemented by \hl{the simplified} circuit shown in Figure \ref{fig:fp_exp_reg_decoder}. Note how when converting to IEEE floats we firstly compute the absolute value of the posit number and then convert it to a floating point one. At the end of the circuit, we just replicate the bit sign of the posit in the bit sign of the floating point, being represented in the sign and module. 
-
-
 In Figure \ref{fig:fp32_p16_circ}, we show \hl{a simplified} circuit for conversion from FP32 to posit$\left<16,0\right>$. The first multiplexer in the cascade of two multiplexers takes the exponent value as input; this input acts as a mask to detect \textit{Not A Real (NaR)} values. The 16-bit regime encoder module is implemented by \hl{the simplified} circuit shown in Figure \ref{fig:fp_exp_reg_encoder}. Note how when converting from IEEE floats we just ignore the sign and build the positive posit and then we use the sign to apply the 2's complement to the result if negative. Furthermore, we build the different posit fields considering their maximum possible length without computing any length but the regime one, making the circuit simpler.
 
 \begin{figure}

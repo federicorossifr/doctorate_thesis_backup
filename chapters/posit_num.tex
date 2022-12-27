@@ -1,9 +1,5 @@
 \chapter{Posit numbers}\label{chap:posit_num}
-
-
 \lettrine{P}{osit} numbers made their first appearance in the work of John L. Gustfason "Beating Floating Point at its Own Game: Posit Arithmetic" \cite{gustafson2017beating}. The idea behind the format was to create a drop-in replacement for binary32 numbers. Posit numbers can be also seen as a new iteration of Universal Numbers (also called \textit{unum}). We can consider Posits as Type III unums.
-
-
 Type I unums are a super-set of binary32 numbers, that is extended with an additional bit, called \textit{ubit}, that states whether the real number represented by that Unum is an exact binary32 or lies between two consecutive representations. Another difference with binary32 numbers is that unums do not have a predefined length for exponent and fraction fields. 
 
 The second iteration of Type I unums - namely, Type II unums - points in the direction of totally abandoning the compatibility with binary32 numbers, nearing the concept of \textit{projective reals}\footnote{\url{https://en.wikipedia.org/wiki/Real_projective_line}}. The final iteration of unums is represented by the Type III Unum, also called Posit.
@@ -18,23 +14,18 @@ Posit numbers are stored in two's complement integers. As shown in Figure \ref{f
     \item \textcolor{lightred}{Exponent} is the exponent field, without any bias offset; depending on $esbits$ and regime length it can span from $0$ to $esbits$ bits.
     \item \textcolor{lightgreen}{Fraction} is the fractional part of the mantissa; depending on the other fields it can be absent.
 \end{itemize}
-
-
 Sign, exponent and fraction have the same identical meaning as the homonymous fields in IEEE binary numbers. 
-
 The regime field is instead new and different: its length depends on the value of the bits. In particular, the regime length depends on the number of subsequent identical bits that we find after the sign until a bit of opposite value is found. This means that, if we have this bit-string:
 \begin{equation}
     b_1, b_2, b_3 \dots b_l, \overline{b_{l}}
 \end{equation}
  where $b_1 = b_2 = \dots = b_l = b$, the regime length will be $l$. Depending on the value of $b$ the regime value $k$ will be computed as follows:
- 
 \begin{equation}\label{eqn:regimeValue}
 k = \left\{\begin{matrix}
  l-1& b = 1  \\
  -l & b = 0  \\
 \end{matrix}\right.
 \end{equation}
-
 The regime value is a scale factor for a special constant, that depends on the posit configuration, called \textit{useed}. The \textit{useed} value is computed as follows:
 \begin{equation}\label{eqn:useed}
     \text{useed} = 2^{2^{esbits}}
@@ -52,7 +43,6 @@ Wrapping everything up, the real value associated with a posit $p$ represented b
 
 
 Having the exponent and the fraction bits depending on the length of the regime is a clever way to express the so-called \textit{tapered accuracy}: numbers near $1$ (in magnitude) will have more bits allocated for the fractional part than extremely large (or small) numbers farther from $1$, thus having higher decimal accuracy. Although it highly depends on the application, the probability of encountering such extremely large or small numbers is far smaller than the one for numbers near to 1. This theoretically gives a substantial boost to posit accuracy in computations.
-
 Figures \ref{fig:positCloseToOne} and \ref{fig:positFarFromOne} show this concept with an example. The real value $1.125$ is closer to $1$ than the value $32704$: as we can see, the number of fraction bits in the former is far greater than the one on the latter. This also reflects on the \textit{denominator} of the fraction, being $2048$ in the case of the real value $1.125$ and a quarter of that i.e. $256$ for the real value $32704$.
 
 \begin{figure}[t]
@@ -73,7 +63,6 @@ Figures \ref{fig:positCloseToOne} and \ref{fig:positFarFromOne} show this concep
 \begin{figure}\centering\begin{bytefield}[bitwidth=0.66em]{16}\bitbox{16}{0\,1\,1\,1\,1\,0\,1\,0\,1\,1\,1\,1\,1\,1\,1\,1}\\\\\bitheader[endianness=big]{0-15}\\\colorbitbox{lightcyan}{1}{{S}}&\colorbitbox{lightgreen}{5}{R}&\colorbitbox{lightred}{2}{E}\colorbitbox{amber}{8}{F}\\\bitbox{1}{\color{cyan}0}&\bitbox{5}{\color{amber}1\!\;1\!\;1\!\;1\!\;\color{darkamber}0}&\bitbox{2}{\color{lightred}1\!\;0}&\bitbox{8}{\color{darkgreen}1\!\;1\!\;1\!\;1\!\;1\!\;1\!\;1\!\;1}&\end{bytefield}\caption{An example of Posit configuration with 16 bits and 2 exponent bits. The associated real value to the shown Posit is:$\textcolor{cyan}{1}\cdot 16^{\textcolor{darkamber}{3}}\cdot 2^{\textcolor{lightred}{2}}\cdot ( 1 + \textcolor{darkgreen}{255}/256)= 32704.0$}\label{fig:positFarFromOne}\end{figure}
 
 Differently from binary32 numbers, the posit format does not have subnormal numbers. Indeed, the mantissa always has an implicit 1 and all numbers are considered in the same way. Furthermore, again in contrast with binary32 numbers, there is only one representation for infinite values or Not a Real (NaR) values. This particular bit string is represented by the integer $i = 2^{nbits - 1}$.
-
 Given a \posit{nbits}{esbits} we can identify some important values that characterize the behaviour of the format, starting from the \textit{useed} value seen in \eqref{eqn:useed}:
 \[
 \text{maxposit} = useed^{(nbits - 2)}
@@ -118,17 +107,17 @@ According to these two values, we can explicate the rounding, overflow and under
 As we said in the previous Section, since the posit format has a variable length field for the fraction, the decimal accuracy (i.e. the number of allocated fraction bits for a given number) varies across the posit domain.
 
 In particular, the fraction field depends on the length of the regime and exponent fields; given a \posit{nbits}{esbits} the regime field can have a length 
-\[
+\begin{equation}
 l_r \in [2,\text{nbits}-2]
-\]
+\end{equation}
 Consequently, the exponent field can have a length 
-\[
-l_e = \text{min}(\text{esbits},\text{nbits}-1-l_r)
-\]
+\begin{equation}
+l_e = \text{min}(\text{esbits},\text{nbits}-2-l_r)
+\end{equation}
 
 Finally, the fraction field can have a length:
 \begin{equation}\label{eqn:fracFieldLength}
-l_f = \text{nbits} - 1 - l_r - l_e
+l_f = \text{nbits} - 2 - l_r - l_e
 \end{equation}
 
 Looking at the fraction field length in \eqref{eqn:fracFieldLength}, we see that, when the regime value $k$ (see \eqref{eqn:regimeValue}) increases in absolute value, the fraction field length decreases; this means that, when numbers are very large or very small (in absolute value) - i.e. numbers with large positive or negative regime values - the fraction field has fewer bits available for allocation. On the other hand, when the regime value decreases (in absolute value), the fraction field length increase; this means that, when numbers are very close to $1$ (in absolute value), the fraction field has more bits available for allocation. 
@@ -208,101 +197,78 @@ One of the core concepts we deal with when bringing together the posit and the f
 \begin{equation}
     g: \mathbb{F} \xrightarrow[]{} \mathbb{P}
 \end{equation}
-
-Note that these two functions must be independent of the posit configuration \posit{nbits}{esbits} and the floating point type.
-
+Note that these two functions must be independent of the posit configuration \\\posit{nbits}{esbits} and the floating point type.
 We introduce a \textit{float intermediate representation} (FIR) - i.e. a contact interface between any posit and any float configuration. Similarly to an IEEE binary, an FIR interface has three fixed-length fields:
 \begin{itemize}
     \item sign $s_f$ on $1$ bit
     \item exponent $e_f$ on $\text{E}_f$ bits
     \item fraction $f_f$ on $\text{F}_f$ bits
 \end{itemize}
-
 Differently from the IEEE binary formats, the exponent here is a \textit{pure} one, without any offset applied. This means that the correspondent real value $r$ is:
 \begin{equation}\label{eqn:firEquation}
     r = (-1)^{s_f} \cdot 2^{e_f} \cdot \left(1 + \frac{f_f}{2^{F_f}} \right)
 \end{equation}
-
 This interface allows us to decouple any posit configuration from any floating point configuration for conversion. Instead, we define another couple of functions $f_{fir}, 
 g_{fir}$ that converts a posit into the FIR space and vice-versa.
-
 On the other side, we need to provide another couple of functions for conversion between FIR and floating point space.
-
 We can now characterize the two functions $f_{fir}, g_{fir}$ comparing Equations \eqref{eqn:positRealValue} and \eqref{eqn:firEquation}. If we take the general case from \eqref{eqn:positRealValue} and we expand the $useed$ term with \eqref{eqn:useed} we obtain:
 \begin{equation}\label{eqn:positRealExpanded}
     r = (-1)^s_p \cdot 2^{2^{esbits} \cdot k + e_p} \cdot \left ( 1+ \frac{f_p}{2^{F_p}} \right)
 \end{equation}
-
 If we compare Equation \eqref{eqn:positRealExpanded} and \eqref{eqn:firEquation} we can impose equality on the three terms of the multiplication. The sign equality is straightforward: the sign of the number in FIR format must match the posit one.
-
 If we are converting from posit to FIR, we can obtain the exponent $e_f$ as:
 \begin{equation}
     e_f = 2^{esbits} \cdot k + e_p
 \end{equation}
-
 If we are converting the other way we can obtain $k$ and $e_p$ using modular arithmetic in base $2$: 
 \begin{equation}
-    k = e_f\ \mathbf{mod}\ 2^{esbits} = \left\lfloor \frac{e_f}{2^{esbits}} \right\rfloor
+    k = \left\lfloor \frac{e_f}{2^{esbits}} \right\rfloor
 \end{equation},
-
 \begin{equation}
-    e_p = e_f\ \mathbf{rem}\ 2^{esbits}
+    e_p = e_f\ \mathbf{mod}\ 2^{esbits}
 \end{equation},
-where $\mathbf{mod}$ is the integer division quotient and $\mathbf{rem}$ is the remainder.
-
+where $\mathbf{mod}$ is the remainder.
 For the fraction we need to impose the equality:
 \begin{equation}\label{eqn:fractionalPartEquivalence}
     \frac{f_f}{2^{F_f}} = \frac{f_p}{2^{F_p}}
 \end{equation}
-
 Then we can solve for $f_f$ as:
 \begin{equation}
     f_f = f_p \cdot 2^{F_f - F_p}
 \end{equation}
-
 and we can solve for $f_p$ as:
 \begin{equation}
     f_p = f_f \cdot 2^{F_p - F_f}
 \end{equation}
-
 Note that, depending on the fraction sizes, the operation may result in loss of information, when we shrink a fraction with more bits to one with fewer bits.  Therefore, we need to take into account the bits we are discarding to eventually round the destination format according to their value.
 
 So far, we have covered the conversion between FIR and posit numbers. The conversion between FIR and IEEE binary (or whichever floating point format) is similar, if not simpler.
-
 Let us consider the IEEE binary32 conversion from/to a given FIR format. 
-
 The exponent $e_{b32}$ of a binary32 number must be offset by $127$ during the transition between the two formats. Therefore, given $e_f$ the FIR exponent, we obtain:
 \begin{equation}
     e_{b32} = e_f + 127
 \end{equation}
-
 On the other hand:
 \begin{equation}
     e_{f} = e_{b32} - 127
 \end{equation}
-
 The fractional part can be handled as in \eqref{eqn:fractionalPartEquivalence}. Note that, differently from posit numbers, when the exponent is $0$, the fractional part of a binary32 needs to be interpreted without the leading $1.$ (i.e. the number must be considered as a subnormal).
-
 Note that, the approach of using an intermediate representation can be used between whichever formats for real numbers that can be represented in the sign, exponent and fraction format.
 
 
 \section{Generalized posits}
 
 As seen in Figures \ref{fig:posit80Fractions} and \ref{fig:posit8xFractions}, the regime length has a sensible impact on the number of fraction bits we can use across the domain. Such length can change to the point that we do not have sufficient decimal accuracy (depending on the application) in a given range of numbers. 
-
 An ideal approach would be to impose an upper limit to the regime length such that we can be sure that we will always reserve at least some bits for the fraction.
-
 In \cite{9151086}, the authors propose a new way to characterize posit numbers. Additionally to the \textit{nbits}  and \textit{esbits} parameters, there are two (mutually exclusive) new parameters that control the dynamic range:
 \begin{itemize}
     \item $K_b$: a regime bias 
     \item $rs$: a limit on the regime length
 \end{itemize}
-
 This results in having the maximum posit value shifted at:
 \begin{equation}
     2^{2^{esbits} \cdot (k-K_b)}
 \end{equation}
-
 if using the $K_b$ parameter, or if we use the $rs$ parameter:
 \begin{equation}
     2^{2^{esbits} \cdot rs} \cdot (1 - 2^{es - t - 1})
@@ -312,7 +278,9 @@ where $ t = n - rs - 1$.
 
 \section{A special case: 0-bit exponent}\label{sec:Posit0bitExponent}
 
-In this section we focus on the posit format when configured with 0 exponent bits (i.e. \posit{x}{0}), also referring to our work in \cite{coco2020sensors}. If we impose $esbits = 0$ - that means also $es = 0$ - in \eqref{eqn:positRealValue}, we get:
+In this section we focus on the posit format when configured with 0 exponent bits (i.e. \posit{x}{0}), also referring to our work in \cite{coco2020sensors}. In general, the operations presented in this section allows for their computation without the need of decoding the posit, thus simplyfing the software (or hardware) involved in their elaboration. These operators introduce very interesting properties and results: (i) faster evaluation than the exact counterpart with a negligible accuracy degradation; (ii) enabling an efficient ALU emulation of a number of Posits operations; (iii) enabling the possibility to vectorize operations n Posits, using existing ALU vectorized operations (such as the Scalable Vector Extension of ARM CPUs or Advanced Vector Extensions on Intel CPUs). While using 0 bit for the exponent reduces the dynamic range of the posit (see Equation \eqref{eqn:useed}), it allows for an higher density of representation when approaching \texttt{minposit} (see Figures \ref{fig:posit8xResolutions} and \ref{fig:posit8xDistributions}). Given these properties, it is worth to deepen on the behaviour of \posit{n}{0}.
+
+If we impose $esbits = 0$ - that means also $es = 0$ - in \eqref{eqn:positRealValue}, we get:
 \begin{equation}\label{eqn:positRealValueExp0}
     (-1)^s \cdot \text{2}^{k} \cdot \left ( 1+ \frac{f}{2^F} \right)
 \end{equation}
@@ -326,16 +294,12 @@ In this section we focus on the posit format when configured with 0 exponent bit
 \end{figure}
 
 since $useed = 2^{2^0} = 2$. Having no exponent bits results in the behaviour shown in Figures \ref{fig:posit8xFractions} and \ref{fig:posit8xDistributions}. In particular, looking at Figure \ref{fig:posit8xDistributions}, the density distribution of a \posit{8}{0} tends to decay slower when moving away from the origin, thus having a better coverage in the range $[-useed,useed]$ when compared to posits with more exponent bits. This can be also seen in Figure \ref{fig:posit8xResolutions}, where the resolution of \posit{8}{0} is constant in $[-1,1]$ while the resolution of the other two posits increases also in this range. 
-
 As we mentioned in the previous section, a 0-exponent bit posit in the range $[-1,1]$ has the property of having a constant resolution. 
-
 We know that the fraction length $F_p$ depends on the regime length $l$ and, as a consequence, on the regime value $k$. In the range $[-1,1]$, we also know that the regime value is always $k \leq 0$, with the equality holding for posit representing real values of $\pm 1$. This means that in this region, the associated length (excluding the regime stop bit) is $l = - k$. Therefore, the fraction length $F$ can be written as $nbits - l - 2$, where $2$ includes the sign-bit and regime stop bit. We can rewrite \eqref{eqn:positRealValueExp0} as:
 \begin{equation*}
     (-1)^s \cdot 2^k \cdot \left ( 1 + \frac{f_p}{2^{nbits + k - 2}} \right )
 \end{equation*}
-
 If we distribute the term $2^k$ inside the parenthesis we obtain:
-
 \begin{equation*}
     (-1)^s \cdot \left ( 2^k + \frac{f_p\cdot 2^2}{2^{nbits}} \right )
 \end{equation*}
@@ -355,16 +319,12 @@ If we distribute the term $2^k$ inside the parenthesis we obtain:
 \begin{equation}\label{eqn:posit0exponentInUnitaryRange}
     (-1)^s \cdot \left ( \frac{2^2 \cdot (2^{F_p} + f_p)}{2^{nbits}} \right )
 \end{equation}
-
 Note that the value $2^{F_p} + f_p$ represents exactly the last $F_p + 1$ bits of the posit, since the fraction numerator $f_p$ is exactly $F_p$ bits long. Moreover, since the regime bits are in the format $000 \cdots 01$ and $2^{F_p}$ represents exactly the $1$ stopping bit, the integer $P$ representing the posit is exactly:
 \begin{equation}\label{eqn:posit0expUnitary}
     P = 2^{F_p} + f_p
 \end{equation}
-
 Let us compare \eqref{eqn:posit0exponentInUnitaryRange} with \eqref{eqn:fixed2real}. In order to impose the equality between the two equations, $2^2 \cdot ( 2^{F_p} + f_p )$ must be equal to $f$ and $nbits$ must be equal to $F$ in \eqref{eqn:fixed2real}. Then, the integral part $i$ must be 0, since we are in the unitary range.
-
 Therefore,  a \posit{x}{0} in the range $[-1,1]$ is equivalent to a fixed-point on $2\cdot x$ bits with a fractional part equal to $2^2 \cdot ( 2^{F_p} + f_p )$.
-
 In practice, given a \posit{x}{0} we can just shift the posit representation two places left (hence the $2^2$ in \eqref{eqn:posit0exponentInUnitaryRange}) to obtain the fractional part of the correspondent fixed point number without any rounding.
 
 
@@ -372,7 +332,6 @@ In practice, given a \posit{x}{0} we can just shift the posit representation two
 }\label{subsec:fastArithOps}
 
 A format with $0$ exponent bits paves the way to implement several arithmetic operations in a way that does not require decoding of the posit itself, with the risk of introducing an approximation.
-
 Hereafter, we will present the mathematical formulation of several functions, while in Section \ref{sec:cppPositCore} we will evaluate the performance and approximation error of such operations.
 
 \subsubsection{Inverse}
@@ -380,8 +339,7 @@ Hereafter, we will present the mathematical formulation of several functions, wh
 Let us start with the reciprocating formulation:
 \begin{equation}
     y = \frac{1}{x}
-\end{equation}.
-
+\end{equation}
 Firstly, we need to distinguish the formulations shown in \eqref{eqn:posit0exponentInUnitaryRange} from the range  $]-\infty,-1] \cup [1,\infty[$. When in this range, the regime value is always $k \geq 0$ ,  hence $l = k + 1$. This means that the number of bits for the fraction is $F = nbits - k - 3$. We can then write two different formulation for the real value associated to a \posit{x}{0}, where $r^- \in (-1,1)$ and $r^+ \in (-\infty, -1] \cup [1,\infty)$:
 \begin{equation}
    r^- =  (-1)^s \cdot 2^k \cdot \left ( 1 + \frac{f_p}{2^{nbits + k - 2}} \right )
@@ -389,27 +347,23 @@ Firstly, we need to distinguish the formulations shown in \eqref{eqn:posit0expon
 
 \begin{equation}
    r^+ = (-1)^s \cdot 2^k \cdot \left ( 1 + \frac{f_p}{2^{nbits - k - 3}} \right )
-\end{equation}.
-
-
+\end{equation}
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{img/invPosit160.png}
     \caption{Comparison between exact inverse and decoding-free inverse for \posit{16}{0}}
     \label{fig:invPosit160}
 \end{figure}
-
 Now, let $x, y = \frac{1}{x}$ be two posits encoded with, respectively $s_x,k_x, f_x$ and $s_y = s_x, k_y, f_y$. Since there is an inversion, if $x \in [-1,1]$ then $y \in (-\infty, -1] \cup [1,\infty)$ (or vice-versa). We want to express $x \cdot y \sim 1$ using the posit representation of a real:
 \begin{equation}\label{eqn:positx0prodInverse}
     x \cdot y = 2^{k_x+k_y} \cdot \left[ \left (1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}} \right ) \cdot \left (1 + \frac{f_y}{2^{2^{nbits - k_y - 3}}} \right ) \right] \simeq 1
-\end{equation}.
+\end{equation}
 
 We need to distinguish two cases:
 \begin{itemize}
     \item[a)]$f_x = 0$, i.e. x is a pure exponential number and has an exact inversion in the posit space representation
     \item[b)] $f_x \neq 0$, i.e. x has also a fractional part and it has not an exact inversion in the posit space representation
 \end{itemize}
-
 Indicating with $P$ the integer representing the posit number, we can test the case as follows (i.e. the number is a pure exponential one if): 
 \begin{equation}
     P\ \mathbf{and}\ (P - 1) = 0
@@ -419,18 +373,14 @@ Indicating with $P$ the integer representing the posit number, we can test the c
 \begin{equation}
     x \cdot y = 2^{0} \cdot \left[ \left (1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}} \right ) \cdot \left (1 + \frac{f_y}{2^{2^{nbits + k_x - 3}}} \right ) \right] \simeq 1
 \end{equation}
-
 We then develop the product inside the square brackets, discarding the product between the fraction themselves, introducing no approximation since $f_x = f_y = 0$:
-
 \begin{equation}
     x \cdot y = 2^{0} \cdot \left[ 1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}}  + \frac{f_y}{2^{2^{nbits + k_x - 3}}} \right] \simeq 1
 \end{equation}
-
 Since the number must be equal to $1$, we impose the fractional part to be $0$, therefore:
 \begin{equation}
     f_x + 2\cdot f_y = 0
 \end{equation}
-
 Since we already know that $f_x$ and $f_y$ are $0$, this holds by construction. 
 
 Therefore, in this case the only transformation needed is $k_y = -k_x$. Since $k_x \leq 0$, changing the sign reflects on the length being increased by $1$. This means that the regime bits must be flipped and another bit of the same value must be appended to the regime. Since $f_x = 0$, if we invert it and add $1$ we get a bit set on the F-th least significant bit - i.e. on the former regime stop-bit. Wrapping everything up, we can obtain the inverse of $x$ with this expression, being $X$,$Y$ the integer numbers representing the posits:
@@ -442,13 +392,10 @@ Therefore, in this case the only transformation needed is $k_y = -k_x$. Since $k
 \begin{equation}
     x \cdot y = 2^{-1} \cdot \left[ \left (1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}} \right ) \cdot \left (1 + \frac{f_y}{2^{2^{nbits + k_x - 2}}} \right ) \right] \simeq 1
 \end{equation}
-
 Again, we develop the product inside square brackets, discarding the fraction product, now introducing an approximation:
-
 \begin{equation}
     x \cdot y = 2^{-1} \cdot \left[ 1 + \frac{f_x}{2^{2^{nbits + k_x - 2}}}  + \frac{f_y}{2^{2^{nbits + k_x - 2}}} \right] \simeq 1
 \end{equation}
-
 Since the product must be $\sim 1$, we solve by $f_y$, obtaining:
 \begin{equation}
 \left\{\begin{matrix}
@@ -461,11 +408,8 @@ When changing the sign of $k_x$, we are acting like in case a), increasing the l
 
 \begin{equation}
     Y = X\ \mathbf{xor}\ (2^{nbits - 1} - 1) + 1
-\end{equation}.
-
-
+\end{equation}
 We obtained that, in both cases a) and b), the formulation for the inversion is the same, so we can fuse the two into one. However, the second case introduces, inevitably, an approximation since we discarded the product between fractions inside the square brackets.
-
 
 \subsubsection{$\mathbf{2\cdot x}$ and $\mathbf{x/2}$}
 
@@ -477,35 +421,27 @@ Let us proceed with the $y = 2\cdot x$ operation. For this operation we need to 
     \item[b)] $r \in (-1,-0.5] \cup [0.5,1) \xrightarrow{} 2\cdot r \in (-2,-1] \cup [1,2) $
     \item[c)] $r \in (-\infty, -1] \cup [1, \infty)  \xrightarrow{} 2\cdot r \in (-\infty, -2] \cup [2, \infty)$
 \end{itemize}
-
 Regardless of the case we are in, we can write the following expression for the operation $y = 2 \cdot x$:
 
 \begin{equation}
     y = 2 \cdot x = (-1)^{s_x} \cdot 2^{k_x + 1} \cdot \left(1 + \frac{f_x}{2^{F_x}} \right) 
 \end{equation}
-
 This means that, for all the cases, $k_y = k_x + 1$
-
 For symmetry, we can focus only on the positive quadrant of the posit ring. The values $0.5,1,2$ are, respectively, represented by the integers $2^{nbits - 3}, 2^{nbits - 2}, 2^{nbits - 2} + 2^{nbits - 3}$.
 
 \paragraph{Case a)} When $x \in [0,0.5)$ we know that $k_x \leq 0$, therefore $l_x = -k_x$. We also know that $y = 2\cdot x = \in [0,1)$, therefore $k_y \leq 0$ and $l_y = -k_y$. If we substitute the equivalence  $k_y = k_x + 1$ we obtain:
 \begin{equation}
     l_y = - (k_x + 1) = l_x - 1
 \end{equation}
-
-
 In case a), we know that both $k_x, k_y$ will be in the form $000 \dots 01$. In particular, after multiplying by $2$, the regime length of $y$ will be shorter by 1. This corresponds to shifting the posit one position to the left. Since we are operating on positive numbers, we are guaranteed that the sign is preserved. Let $X,Y$ be the integer for the posits that represent $x,y$:
 \begin{equation}
     Y = \mathbf{lls} (X,1) = 2 \cdot X
 \end{equation}
-
 where $\mathbf{lls}(X,N)$ is the logical left shift of the integer $X$ of $N$ positions.
-
 \paragraph{Case b)} When $x \in [0.5,1)$ we know that $k_x \leq 0$ again. Hence, $l_x = -k_x$. In this case, $y = 2\cdot x \in [1,2)$, thus $k_y \geq 0$ and $l_y = k_x + 2$. Substituting the equivalence $k_y = k_x + 1$ we obtain:
 \begin{equation}
     l_y = 2 - l_x
 \end{equation}
-
 Note that when $esbits = 0$, the range expressed in \eqref{eqn:highestFractionBits} is $[0.5,2)$ This means that $\forall x \in [0.5,2), l_x = 1$ and, as a consequence, we will always have $l_y = 2 - l_x = 1$. While $l_x = 1$ for a negative $k_x = -1$, $l_y = 1$ for a positive $k_y = 1$. This means that we need to flip the regime bits. Since we are in the region with the minimum number of regime bits (i.e. 2 regime bits, including the stopping bit), we just need to flip the 2 most significant bits (ignoring the sign). Let $X,Y$ be the integer for the posits that represent $x,y$:
 \begin{equation}
     Y = X\ \mathbf{xor}\ (2^{nbits - 2} + 2^{nbits - 3})
@@ -516,12 +452,10 @@ Note that when $esbits = 0$, the range expressed in \eqref{eqn:highestFractionBi
 \begin{equation}
     l_y = l_x + 1
 \end{equation}
-
 In this case, the regime bits are in the format $111 \cdots 10$. When we multiply by two we are increasing the regime and the regime length by $1$. This means that we need to put a single bit set in front of the regime and then shift the posit to the right (possibly discarding the fraction least significant bit). Let $X,Y$ be the integer for the posits that represent $x,y$:
 \begin{equation}
     Y = (X\ \mathbf{or}\ 2^{nbits - 1}) \cdot 2^{-1}
 \end{equation}
-
 Note that we can elaborate in the same way for the $x/2$ operation: this case is omitted because it is symmetrical to the previous one and symmetrical would be the results obtained. 
 
 
@@ -532,24 +466,19 @@ Suppose we are in the $[0,1]$ range and we want to perform the \textit{unitary c
 \begin{equation}
     y = 1 - x    
 \end{equation}
-
 As seen before in \eqref{eqn:posit0expUnitary}, in the unitary range the posit integer $P = 2^{F_p} + f_p$. 
-
 To derive an expression for this complement operation we can write $x + y = 1$ and expand the terms:
 \begin{equation}
     2^{k_x} \cdot \left(1 + \frac{f_x}{2^{F_x}} \right) + 2^{k_y} \cdot \left(1 + \frac{f_y}{2^{F_y}} \right) = 1
 \end{equation}
-
 When in the unitary range we already know that $k \leq 1$ and $F = nbits - 2 + k$ for both $x$ and $y$. If we substitute this in both the terms of the addition we obtain:
 \begin{equation}
     2^{k_x} + \ 2^{k_y} + \frac{f_x + f_y}{2^{nbits - 2}} = 1
 \end{equation}
-
 We multiply both sides by $2^{nbits - 2}$ obtaining:
 \begin{equation}
     2^{F_x} + 2^{F_y} + f_x + f_y = 2^{nbits - 2}
 \end{equation}
-
 We then apply  \eqref{eqn:posit0expUnitary}, obtaining the expression needed to compute $y = 1 - x$:
 \begin{equation}
     X + Y = 2^{nbits - 2} \xrightarrow{} Y = 2^{nbits - 2} - X
@@ -581,7 +510,6 @@ In \cite{gustafson2017beating} the authors reported another version of this tran
 \begin{equation}\label{eqn:pseudoSigmoidPosit0}
     Y = \left ( 2^{nbits - 2} + \frac{X}{2} \right ) \cdot \frac{1}{2}
 \end{equation}
-
 As pointed out in \cite{coco2020sensors}, the two expressions are equivalent.
 
 \subsubsection{Hyperbolic tangent}
@@ -592,25 +520,19 @@ As pointed out in \cite{coco2020sensors}, the two expressions are equivalent.
     \caption{Hyperbolic tangent comparison between actual and pseudo version.}
     \label{fig:pseudoTanhPosit0}
 \end{figure}
-
 The hyperbolic tangent is another commonly used activation function in neural networks. Its expression is quite similar to the sigmoid:
 \begin{equation}
     \mathbf{tanh}(x) = \frac{e^{2x}-1}{e^{2x}+1} 
 \end{equation}
-
 We can obtain this expression from the sigmoid by applying a scale and a transformation:
-
 \begin{equation}
    \mathbf{tanh}(x) =  2 \cdot \mathbf{sigmoid}(2 \cdot x) - 1
 \end{equation}
-
 We can rework the previous expression as follows:
 \begin{equation}
     \mathbf{tanh}(x) = - ( 1 - 2\cdot \mathbf{sigmoid}(2\cdot x))
 \end{equation}
-
 Suppose we only consider negative values for $x$ for symmetry. We know that the $2\cdot x$ operation can be done without decoding with \posit{x}{0}. Since we are dealing with negative numbers, the output of the sigmoid will be in $[0,1/2]$. Again, multiplying this number by $2$ can be done without decoding the posit and the output will be in $[0,1]$. Therefore, we can apply the $1-y$ operation without decoding the posit. Finally, we can change the sign with a 2's complement of the representation.
-
 If we substitute the sigmoid with the pseudo-sigmoid seen in \eqref{eqn:pseudoSigmoidPosit0} we obtain a decoding-free \textit{pseudo hyperbolic tangent}.
 
 \subsubsection{Extended Linear Unit}
@@ -624,7 +546,6 @@ If we substitute the sigmoid with the pseudo-sigmoid seen in \eqref{eqn:pseudoSi
 
 
 The Extended Linear Unit (ELU) is another commonly used activation function in neural networks, mainly adopted to avoid vanishing gradients of S-shaped functions like a sigmoid and hyperbolic tangent.
-
 The formulation of the ELU function is the following:
 
 \begin{equation}
@@ -633,7 +554,6 @@ x & x \geq 0 \\
 \alpha \cdot (e^x - 1) & x < 0  \\
 \end{matrix}\right.
 \end{equation}
-
 The case for $x \geq 0$ is straightforward, so we focus on the $\alpha \cdot (e^x - 1)$ part. In particular, we consider the case where $\alpha = 1$, hence:
 \begin{equation}
     \mathbf{elu}(x) = (e^x - 1) = 2 \cdot \left [ \frac{1}{2\cdot \mathbf{sigmoid}(-x)} - 1 \right]
@@ -648,7 +568,6 @@ We can start from the sigmoid obtained before. We firstly negate the argument to
    \label{eqn:sigm_invm1}1/(2\cdot\textnormal{sigmoid}(-x))-1 = \frac{1+e^x}{2} - 1 = \frac{e^x-1}{2} & \\
   \label{eqn:sigm_twinvm1}2\cdot[1/(2\cdot\textnormal{sigmoid}(-x))-1] = e^x -1&
 \end{align}
-
 If we substitute the sigmoid function with the pseud-sigmoid seen in \eqref{eqn:pseudoSigmoidPosit0} we obtain a decoding-free \textit{pseudo-ELU}.
 
 
@@ -668,15 +587,11 @@ Before the decoding of the posit operands, we make use of some logic meant to di
 \item one of the inputs is \textit{special} (e.g. NaR or inf), which leads to a \textit{special} output
 \item the output of a given operation is \textit{special} and this can be directly inferred from the inputs (e.g. division by zero).
 \end{itemize}
-
-
 If one of these cases is caught, the result is produced without decoding.
-
-
 The possible combinations, for each of the four operation, are tabulated in \ref{table:table_posit_op_combination}, with a distinction between \textit{special} and \textit{trivial} cases.
-
 Special cases are colored in \textcolor{red}{red}, and trivial are colored in \textcolor{orange}{orange}.
-Each posit value can either be \textit{special}, i.e. $\in \{0$, \mbox{NaR}\}, or \textit{non-special}.
+Each posit value can either be \textit{special}, i.e. $\in \{0$, \mbox{NaR}\}, or \textit{non-special}. 
+In order to simplify the logic concerning addition/subtraction, we can already enforce an order between the inputs, so that $p_1$ and $p_2$ carry, respectively, the largest and smaller value (in absolute terms). At the same time, we reserve a flag indicating whether the sign of the two numbers is concordant or not. This observation will be used from now on to simplify the reasoning on the operational implementation.
 
 \begin{table}
 \begin{center}
@@ -797,13 +712,6 @@ multiplication & division \\
 
 
 
-
-
-In order to simplify the logic concerning addition/subtraction, we can already enforce an order between the inputs, so that $p_1$ and $p_2$ carry, respectively, the largest and smaller value (in absolute terms). At the same time, we reserve a flag indicating whether the sign of the two numbers is concordant or not. This observation will be used from now on to simplify the reasoning on the operational implementation.
-
-
-
-
 In the following sections, we cover the implementation of Posit binary operations. For simplicity we will refer to the real value of a posit as follows:
 \begin{equation}\label{eqn:posit_equation}
     p = (-1)^{s} \cdot 2^{te} \cdot (1.f)
@@ -816,23 +724,17 @@ Where $te$ is the exponent-regime joint value:
 \subsection{Addition and Subtraction}\label{Addition_and_Subtraction}
 
 Due to the similarities between the addition and subtraction operations, we will discuss their implementation together, highlighting where the two operations differ.
-
-
 Given two posits, $p_1$ and $p_2$, expressed as \eqref{eqn:posit_equation}, the goal is to find the tuple $(s_{out}, k_{out}, e_{out}, f_{out})$ such that the following holds:
 \begin{equation}\label{equ:addition_equation_001}
     \underbrace{\big[ (-1)^{s_1} \cdot 2^{te_1} \cdot (1.f_1) \big]}_{p_1} \pm \underbrace{\big[ (-1)^{s_2} \cdot 2^{te_2} \cdot (1.f_2) \big]}_{p_2} = \underbrace{ (-1)^{s_{out}} \cdot \overbrace{\big(2^{2^{esbits}}\big)^{k_{out}} \cdot 2^{e_{out}}}^{2^{te_{out}}} \cdot (1.f_{out})}_{p_{out}}
 \end{equation}
-
 We can generalize for rounding inexactness, obtaining the following:
-
 \begin{equation}
 \begin{gathered}
     (s_{out}, k_{out}, e_{out}, f_{out}): \\
     \min | \big[ (-1)^{s_1} \cdot 2^{te_1} \cdot (1.f_1) \pm (-1)^{s_2} \cdot 2^{te_2} \cdot (1.f_2) \big] - \big[ (-1)^{s_{out}} \cdot 2^{te_{out}} \cdot (1.f_{out}) \big] |
 \end{gathered}
 \end{equation}
-
-
 The following always requires that
 \begin{equation}\label{equ:p1_greater_p2}
 |p_1| \ge |p_2|
@@ -852,32 +754,27 @@ Given (\ref{equ:p1_greater_p2}) $b \ge 0$, and $s_{out} \leftarrow s_1$. $te_2$ 
 \end{equation}
 which can be interpreted also as a sequence of bit-wise operations.
 Then, we handle the fractional components; we sum them together, considering that the notation $(1.f)_2$\footnote{using explicit subscript notation to notify the base} encapsulates all the numbers $F_i \in [(1.0)_2, (1.111\dots)_2 ] \equiv [1.0_{10},  2.0_{10})$.
-
 The factor $2^{-b}$ applies a right shift to $(1.f)_2$ by $b$ positions:
 $$
 (1.f)_2 \cdot 2^{-b} \equiv (\underbrace{0.0000\dots0000}_{b}1f)_2 \in (0.0_{10}, 1.0_{10}]
 $$
-
-
-
 Therefore, the addition and subtraction operations can generate values respectively in the range of:
 \begin{itemize}
     \item \textit{addition}: $(1.f_1) + [(1.f_2) \cdot 2^{-b}] \in [1, 4)^{*}$
     \item \textit{subtraction}: $(1.f_1) - [(1.f_2) \cdot 2^{-b}] \in [0, 2)^{**}$
 \end{itemize}
 We can interpret them as fixed point numbers \texttt{Fx<2,\_>} and \texttt{Fx<1,\_>}\footnote{\texttt{\_} signifying undetermined a priori fixed point total size}, where $2$ and $1$ are the number of bits required to represent the largest integers $3^{*}$ and $1^{**}$.
-
 This is is where the addition and subtraction flow slightly diverge: in order to re-normalize the result of the fractional addition/subtraction into the $(1.f_{out})$ configuration we have two different approaches:
 
     \subsubsection{Addition}
-    the fraction is shifted right by $1$ if the most significant bit is $1$, i.e. $(1.f_1) + (1.f_2) \cdot 2^{-b} \ge 2.0$. 
+    The fraction is shifted right by $1$ if the most significant bit is $1$, i.e. $(1.f_1) + (1.f_2) \cdot 2^{-b} \ge 2.0$. 
     This drops the least significant bit which is useless if such a bit is a $0$. Otherwise, if it's a $1$ the information regarding such loss must be preserved and used later on: for that a signal named \textit{is\_truncated} is used. Finally, the right shift is matched in the exponent by increasing the value $te$ by 1.
     \subsubsection{Subtraction}
-    the fraction must be shifted left by a variable amount ($lz$), i.e. the number of leading zeros, for normalization. This is where the second instance of the leading-zero-counter is employed (besides the one used for the decoding). The exponent compensation is done by decreasing the value $te$ by the number of leading zeros.
+    The fraction must be shifted left by a variable amount ($lz$), i.e. the number of leading zeros, for normalization. This is where the second instance of the leading-zero-counter is employed (besides the one used for the decoding). The exponent compensation is done by decreasing the value $te$ by the number of leading zeros.
     $$
     2^{te} \cdot (\overbrace{0.00\dots00}^{lz}1f) \equiv 2^{te - lz} \cdot (1.f)
     $$
-
+An example of the algorithmic flow for the posit algebraic sum is shown in Figure \ref{fig:additionflow}.
 \begin{figure}
     \begin{center}
     % \includegraphics[height=0.7\textheight]{assets/figures/addition_flow.pdf}
@@ -887,19 +784,14 @@ This is is where the addition and subtraction flow slightly diverge: in order to
     \end{center}
 \end{figure}
 
-An example of the algorithmic flow for the posit algebraic sum is shown in Figure \ref{fig:additionflow}.
 
 \subsection{Multiplication}\label{Multiplication}
 
 As before, we have two posit expressed as (\eqref{eqn:posit_equation}); the goal is finding the tuple $(s_{out},$ $k_{out}, e_{out}, f_{out})$ such that:
-
-
 \begin{equation}\label{equ:multiplication_equation_001}
     \big[ (-1)^{s_1} \cdot 2^{te_1} \cdot (1.f_1) \big] \cdot \big[ (-1)^{s_2} \cdot 2^{te_2} \cdot (1.f_2) \big] =(-1)^{s_{out}} \cdot \overbrace{\big(2^{2^{ES}}\big)^{k_{out}} \cdot 2^{e_{out}}}^{2^{te_{out}}} \cdot (1.f_{out})
 \end{equation}
-
 Again, we need to consider rounding inexactness:
-
 \begin{equation}
 \begin{gathered}
     (s_{out}, k_{out}, e_{out}, f_{out}): \\
@@ -912,11 +804,8 @@ Simplifying the equation, we obtain the following:
     (-1)^{s_1 \oplus s_2}  \cdot \big[ 2^{te_1} \cdot 2^{te_2} \big] \cdot \big[ (1.f_1) \cdot (1.f_2) \big]
 \end{gathered}
 \end{equation}
-
 Where $s_1$ and $s_2$ are \textit{xor}-ed together to get the sign $s_{out}$ and the total exponents $te_1$ and $te_2$ summed up to give $te_{out}$. 
 $(1.f_1) \cdot (1.f_2)$ results in a number $\in [1, 4)$, and just like in the addition -- if not already -- it is readjusted to its normalized format by means of a right-shift and an increment of $te$.
-
-
 \begin{figure}
     \begin{center}
     % \includegraphics[height=0.7\textheight]{assets/figures/posit_mul_flow.pdf}
@@ -925,7 +814,6 @@ $(1.f_1) \cdot (1.f_2)$ results in a number $\in [1, 4)$, and just like in the a
     \label{fig:mulflow}
     \end{center}
 \end{figure}
-
 An example of the algorithmic flow for the posit algebraic sum is shown in Figure \ref{fig:mulflow}.
 
 \subsection{Division}
@@ -937,10 +825,7 @@ the following holds:
 \begin{equation}\label{equ:division_equation_001}
     \frac{\big[ (-1)^{s_1} \cdot 2^{te_1} \cdot (1.f_1) \big]}{\big[ (-1)^{s_2} \cdot 2^{te_2} \cdot (1.f_2) \big]} = (-1)^{s_{out}} \cdot \overbrace{\big(2^{2^{ES}}\big)^{k_{out}} \cdot 2^{e_{out}}}^{2^{te_{out}}} \cdot (1.f_{out})
 \end{equation}
-
 Again, we can account for rounding inexactness:
-
-
 \begin{equation}
 \begin{gathered}
     (s_{out}, k_{out}, e_{out}, f_{out}): \\
@@ -964,14 +849,11 @@ From the mathematical standpoint it comes off as not too dissimilar than a produ
 \end{aligned}
 \end{equation}
 range rather than the product's $[1.0, 4.0)$ range.
-
-
 If we remember that $(1.f)$ is does not belong to $\mathbb{R}$, but rather to $ \mathbb{Q}$, we can multiply both numerator and denominator such that they are two integer numbers:
 \begin{equation}\label{divunsignedinteger00001}
 \frac{1.\overbrace{011\dots0001001}^{F-bits}}{1.\underbrace{110\dots0001111}_{F-bits}} \equiv \frac{1011\dots0001001 \cdot \cancel{2^{-F}}}{1110\dots0001111 \cdot \cancel{2^{-F}}}
 \end{equation}
 and the result is the one of an integer division. Consequence of (\ref{equ:min_max_frac_0010032}), the result will have either a $0$ or $1$ as most significant bit. 
-
 The critical part of the division operation is the one in Equation \eqref{divunsignedinteger00001}. Integer division can be performed in different ways, each with a trade-off between accuracy and resulting hardware complexity. We will deepen on this topic in Section \ref{Approximated_Algorithms}. 
 
 
@@ -981,8 +863,6 @@ The critical part of the division operation is the one in Equation \eqref{divuns
 
 
 \textit{Normalization} consists in the conversion of a general FIR representation, i.e. the output of sum, multiplication or division, to a posit bit-string. This is typically independent of the operation computed before.
-
-
 The two terms $k'$ and $e$ must be unpacked from the total exponent ($te$) term (\eqref{eqn:posit_equation}):
 \begin{equation}\label{k_and_exp_from_totalexp}
 \begin{cases}
@@ -991,13 +871,9 @@ The two terms $k'$ and $e$ must be unpacked from the total exponent ($te$) term 
 \end{cases}
 \end{equation}
 This $k'$ however is not yet the $k$ that comes up in the posit expression (\eqref{eqn:posit_equation}) as it might be out of the bounds of the maximum $k$ representable by a $N$-bits posit regime field. If that does indeed happen, $k$ will be clipped at the maximum or minimum value respectively.
-
 When $k'$ is fixed, it follows that the length of the regime can be also determined. Then, the actual size of the exponent is inferred from the regime field size and the posit parameters; finally, the fractional field size is computed as the remaining bits, if any.
-
 Finally, we need to accommodate for the fraction bits that fall off the posit size, if any. That turns out to be an implicit \textit{rounding to lowest}.
-
 However, depending on the specific rounding scheme dictated by the design, a few more operations must be considered.
-
 Assuming the rounding scheme desired is the standardized \textit{round to nearest even}, we consider 3 bits from the fraction  (Figure \ref{fig:fraction_before_rounding}):
 \begin{itemize}
 \item guard bit (G): the least significant bit of the sequence of digits that fit the fraction field of the final posit,
@@ -1006,7 +882,6 @@ Assuming the rounding scheme desired is the standardized \textit{round to neares
 % \texttt{|bits} returns $1$ if either bit of \texttt{bits} is $1$.
 } of the sequence of bits to the right of the round bit (i.e. the discarded bits).
 \end{itemize}
-
 These bits will be used to complete the rounding of the posit, applying the correct \textit{to nearest} policy.
 
 

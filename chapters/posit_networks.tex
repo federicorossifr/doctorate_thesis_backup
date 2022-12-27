@@ -6,7 +6,7 @@
 
 \subsection{Activation functions} When choosing activation functions we need to consider the output range of the functions. For example, if we consider the ReLU activation function, it discards all the negative numbers passed as argument flattening them to $0$. Furthermore the sigmoid function, limiting the output in $[0,1]$ discards the precious high-density region $[-1,0]$. Instead, the hyperbolic tangent can fully exploit the region $[-1,1]$. However, being modern deep neural network architectures are very deep (the number of layers is huge), S-shaped functions like hyperbolic tangents suffer from vanishing gradients, thus they are not acceptable in the training process. The ELU function and in general Scaled Extended Linear Units (SELUs, \cite{NIPS2017_6698}), manages to cover a higher range, typically parameterized by two real factors $\alpha$ and $\beta$ : $[-\alpha \cdot \beta,+\infty)$.
 
-\subsection{Distribution of values} When stacking layers in a deep model we need to care about the right-skewing of value distributions during forwarding passes. Adding a batch normalization layer \cite{Ioffe:2015:BNA:3045118.3045167} after some convolution and activation steps can manage to re-scale the values by subtracting the batch mean and dividing it by its standard deviation. This will result in a value distribution with a null mean value and unitary standard deviation, thus fitting the needs already explained. 
+\subsection{Distribution of values} When stacking layers in a deep model we need to care about the right-skewing of value distributions during forwarding passes. Adding a batch normalization layer \cite{Ioffe:2015:BNA:3045118.3045167} after some convolution and activation steps can manage to re-scale the values by subtracting the batch mean and dividing it by its standard deviation. This will result in a value distribution with a null mean value and unitary standard deviation. 
 
 \subsection{Loss strategies} If we want to perform low-precision inference without losing too much accuracy (e.g. switching to posit$\left <8,0\right>$ for inference) we may need to take into account the dynamic range of such types (e.g. posit$\left <8,0\right>$ has a range $[-64,64]$). This means that, during the training, we must penalise high network weights. This can be addressed by using different types of regularization. In \cite{kukaka2017regularization}  are shown recent trends in regularization for neural networks. For example a weight decay approach (see \cite{plaut1986experiments}) with a decay rate of $\lambda$ adds the following $L^2$ regularization term to the loss: \[R(w) = \lambda \cdot \frac{1}{2} \cdot \left | w \right |^2_2 . \] This has been proven to reduce overfit and training error in \cite{Krizhevsky:2017:ICD:3098997.3065386}. In general, avoiding overfitting can help in maintaining low weight values. Therefore, the use of other layers designed to help with a generalization like a dropout layer \cite{JMLR:v15:srivastava14a} can be useful as well.
 
@@ -36,6 +36,7 @@ We used the following evaluation datasets:
     \item ImagenetV2: additional test-set that uses the same Imagenet classes but with new images \cite{recht2019imagenet}, $224\times224$ RGB images
     \item Pascal VOC 2007: object detection dataset \cite{pascal-voc-2007}, $300\times300$ RGB images
 \end{itemize}
+Table \ref{tab:big_perf} and \ref{tab:small} show the accuracy on different neural networks when using different numerical formats. The accuracy was obtained from the test set portion of the considered dataset. We started from a pre-trained binary32 model and the converted the weights to the different numerical formats shown in the tables. Moreover, during the accuracy evaluation, also the numerical computation where carried out using those numerical formats - that is, we are not only compressing the weights but also using them compressed during computation. As we can see the accuracy degradation whe using Posit numbers is negligible in most of the applications, with \posit{16}{x} being able to closely match the baseline binary32 accuracy in all of them.
 
 
 \begin{table}[H]
@@ -48,7 +49,7 @@ We used the following evaluation datasets:
 \multicolumn{1}{l}{} & MNIST      & GTRSB      & CIFAR10    \\ \hline
 binary32              & 98.86\%    & 91.9\%     & 83.5\%     \\
 \posit{16}{1}            & 98.83\%    & 91.8\%     & 83.5\%     \\
-p\posit{16}{0}            & 98.50\%    & 90.5\%     & 83\%       \\
+\posit{16}{0}            & 98.50\%    & 90.5\%     & 83\%       \\
 bfloat16             & 98.86\%    & 91.9\%     & 82\%       \\
 \posit{8}{0}             & 98.34\%    & 90.4\%     & 78\%       \\
 bfloat8              & 69.57\%    & 80.45\%    & 67.5\%     \\ \hline
@@ -68,4 +69,7 @@ binary32              & 81.9\%                                                  
 \posit{16}{2}            & 79.7\%                                                                           & 78.49\%                                                                           \\
 bfloat16             & 78.9\%                                                                           & 73.29\%                                                                           \\ \hline
 \end{tabular}
+
+
+
 \end{table}
